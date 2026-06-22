@@ -50,6 +50,26 @@ def get_problems(db=Depends(get_db)):
     "GROUP BY problems.id, problems.title, problems.difficulty, problems.note ")
     return cur.fetchall()  # -> [{"id": 1, "title": "Two Sum"}, {"id": 2, "title": "Valid Parentheses"}]
 
+@app.get("/problems/today")
+def get_problem(db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT " \
+    "problems.id, " \
+    "problems.title, " \
+    "problems.difficulty, " \
+    "problems.note, " \
+    "array_agg(DISTINCT topics.topic) AS topics, " \
+    "array_agg(DISTINCT patterns.pattern) AS patterns " \
+    "FROM problems " \
+    "JOIN problem_topics ON problems.id = problem_topics.problem_id " \
+    "JOIN topics ON problem_topics.topic_id = topics.id " \
+    "JOIN problem_patterns ON problems.id = problem_patterns.problem_id " \
+    "JOIN patterns ON problem_patterns.pattern_id = patterns.id " \
+    "WHERE next_review_at <= now() GROUP BY problems.id, problems.title, problems.difficulty, problems.note ORDER BY next_review_at ASC LIMIT 1 ")
+    
+    
+    return cur.fetchone()
+
 @app.patch("/problems/{problem_id}")
 def update_problem(problem_id: int, payload: ProblemUpdate, db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
@@ -112,7 +132,6 @@ def review_problem(problem_id: int, payload: ReviewCreate, db=Depends(get_db)):
     row = cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Problem not found")
-
 
     current_interval_days = row["current_interval_days"]
 
