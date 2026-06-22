@@ -92,6 +92,21 @@ def update_problem(problem_id: int, payload: ProblemUpdate, db=Depends(get_db)):
     )
     return cur.fetchone()
 
+@app.delete("/problems/{problem_id}", status_code=204)
+def delete_problem(problem_id: int, db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        "DELETE FROM problems " \
+        "WHERE problems.id = %s ", (problem_id,)
+    )
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    
+    db.commit()
+
+
+
+
 
 
 
