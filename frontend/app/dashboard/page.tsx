@@ -1,11 +1,19 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
+
+function UpgradeBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("upgrade") !== "success") return null;
+  return (
+    <div className="mb-6 rounded-xl bg-success/20 border border-success/30 px-4 py-3 text-sm font-medium text-foreground">
+      🎉 You&apos;re now Pro! Welcome to Lock The Code Pro.
+    </div>
+  );
+}
 
 type Problem = {
   id: number;
@@ -19,8 +27,6 @@ type Problem = {
 
 export default function DashboardPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  const searchParams = useSearchParams();
-  const upgraded = searchParams.get("upgrade") === "success";
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -150,11 +156,9 @@ export default function DashboardPage() {
 
   return (
     <main className="p-8 max-w-2xl mx-auto w-full">
-      {upgraded && (
-        <div className="mb-6 rounded-xl bg-success/20 border border-success/30 px-4 py-3 text-sm font-medium text-foreground">
-          🎉 You&apos;re now Pro! Welcome to Lock The Code Pro.
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <UpgradeBanner />
+      </Suspense>
       <h1 className="text-2xl font-semibold mb-6">Your Problems</h1>
 
       {problems.length === 0 ? (
