@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  ClerkProvider,
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,8 +47,18 @@ export default function RootLayout({
                 </button>
               </SignUpButton>
             </Show>
+
             <Show when="signed-in">
-              <Link href="/dashboard" className="text-sm font-medium hover:underline">
+              <Link
+                href="/review"
+                className="text-sm font-medium hover:underline"
+              >
+                Review
+              </Link>
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium hover:underline"
+              >
                 Dashboard
               </Link>
               <UserButton />
