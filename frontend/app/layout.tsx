@@ -49,6 +49,12 @@ export default function RootLayout({
 
             <Show when="signed-in">
               <Link
+                href="/pricing"
+                className="border rounded-full bg-accent text-foreground font-semibold text-sm h-9 px-4 flex items-center gap-1.5 transition-opacity hover:opacity-80"
+              >
+                <span className="text-xs"></span> Pro
+              </Link>
+              <Link
                 href="/review"
                 className="text-sm font-medium hover:underline"
               >

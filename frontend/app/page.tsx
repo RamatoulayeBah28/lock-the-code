@@ -19,13 +19,12 @@ export default function Home() {
               Start Free
             </button>
           </SignUpButton>
-          <button
-            disabled
-            title="Coming soon"
-            className="rounded-full border border-foreground/20 text-foreground/50 font-medium text-base h-12 px-8 cursor-not-allowed"
+          <a
+            href="/pricing"
+            className="rounded-full border border-foreground/20 text-foreground font-medium text-base h-12 px-8 flex items-center transition-opacity hover:opacity-70"
           >
             Get Pro
-          </button>
+          </a>
         </div>
       </main>
 
