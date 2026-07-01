@@ -5,6 +5,7 @@ from auth import get_current_user
 from config import get_settings
 from db import get_db
 from schemas import ProblemCreate, ProblemUpdate, ReviewCreate
+from stripe_routes import router as stripe_router
 from psycopg2.extras import RealDictCursor
 
 
@@ -20,6 +21,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(stripe_router)
+
+
+@app.get("/me")
+def get_me(user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, is_pro, subscription_status FROM users WHERE id = %s", (user["id"],))
+    return cur.fetchone()
 
 
 @app.get("/topics")
