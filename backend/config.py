@@ -6,12 +6,14 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    database_url: str
     clerk_secret_key: str
     clerk_jwt_key: str | None = None
     clerk_authorized_parties: Annotated[list[str], NoDecode] = []
     clerk_webhook_signing_secret: str | None = None
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000", "http://localhost:3001"]
 
-    @field_validator("clerk_authorized_parties", mode="before")
+    @field_validator("clerk_authorized_parties", "cors_origins", mode="before")
     @classmethod
     def _split_csv(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
@@ -23,4 +25,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]
