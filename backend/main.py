@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_current_user
+from config import get_settings
 from db import get_db
 from schemas import ProblemCreate, ProblemUpdate, ReviewCreate
 from psycopg2.extras import RealDictCursor
@@ -9,12 +10,12 @@ from psycopg2.extras import RealDictCursor
 
 app = FastAPI()
 
-# Browsers block cross-origin requests by default (the frontend on :3001
-# calling this API on :8000 counts as cross-origin). This explicitly
-# allow-lists the dev frontend; add the production domain once deployed.
+_settings = get_settings()
+print(f"[startup] CORS origins: {_settings.cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
