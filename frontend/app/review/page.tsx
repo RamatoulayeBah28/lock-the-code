@@ -9,6 +9,7 @@ type Problem = {
   title: string;
   difficulty: string;
   note: string | null;
+  url: string | null;
   topics: string[];
   patterns: string[];
 };
@@ -120,9 +121,12 @@ export default function ReviewPage() {
               {problem.topics.join(", ")} · {problem.patterns.join(", ")}
             </p>
             {problem.note && (
-              <p className="text-sm italic text-foreground/50">
-                {problem.note}
-              </p>
+              <p className="text-sm italic text-foreground/50">{problem.note}</p>
+            )}
+            {problem.url && (
+              <a href={problem.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                View problem ↗
+              </a>
             )}
           </div>
         )}
