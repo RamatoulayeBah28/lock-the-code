@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
 import {
   ClerkProvider,
@@ -23,6 +24,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Lock The Code",
   description: "The only free technical interview study plan you need.",
+  icons: {
+    icon: "/lock-the-code-fav.png",
+  },
 };
 
 export default function RootLayout({
