@@ -11,14 +11,14 @@ const FREE_FEATURES = [
   "SM-2 spaced repetition review queue",
   "Topics & patterns tagging",
   "Edit & delete problems",
+  "Google Calendar sync (coming soon)",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
   "AI Tutor mode — Socratic hints while solving",
   "AI Interviewer mode — mock interview to practice any problem",
-  "Unlimited flashcard decks",
-  "Google Calendar sync (coming soon)",
+  "Unlimited flashcard decks (coming soon)",
 ];
 
 const PLANS = [
@@ -112,7 +112,16 @@ export default function PricingPage() {
                 key={f}
                 className="flex items-start gap-2 text-sm text-foreground/70"
               >
-                <FontAwesomeIcon icon={faCheck} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)", marginTop: "0.125rem", flexShrink: 0 }} />
+                <FontAwesomeIcon
+                  icon={faCheck}
+                  style={{
+                    width: "0.875rem",
+                    height: "0.875rem",
+                    color: "var(--success)",
+                    marginTop: "0.125rem",
+                    flexShrink: 0,
+                  }}
+                />
                 {f}
               </li>
             ))}
@@ -153,7 +162,16 @@ export default function PricingPage() {
                   key={f}
                   className="flex items-start gap-2 text-sm text-foreground/70"
                 >
-                  <FontAwesomeIcon icon={faCheck} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)", marginTop: "0.125rem", flexShrink: 0 }} />
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    style={{
+                      width: "0.875rem",
+                      height: "0.875rem",
+                      color: "var(--success)",
+                      marginTop: "0.125rem",
+                      flexShrink: 0,
+                    }}
+                  />
                   {f}
                 </li>
               ))}

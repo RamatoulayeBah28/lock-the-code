@@ -4,7 +4,11 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPen,
+  faTrash,
+  faCalendarPlus,
+} from "@fortawesome/free-solid-svg-icons";
 
 function UpgradeBanner() {
   const searchParams = useSearchParams();
@@ -30,6 +34,7 @@ export default function DashboardPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCalendarBanner, setShowCalendarBanner] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
   const [title, setTitle] = useState("");
@@ -201,7 +206,40 @@ export default function DashboardPage() {
       <Suspense fallback={null}>
         <UpgradeBanner />
       </Suspense>
-      <h1 className="text-2xl font-semibold mb-6">Your Problems</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Your Problems</h1>
+        <button
+          onClick={() => setShowCalendarBanner((v) => !v)}
+          className="flex items-center gap-2 rounded-full border border-foreground/20 px-4 h-9 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
+        >
+          <FontAwesomeIcon
+            icon={faCalendarPlus}
+            style={{
+              width: "0.875rem",
+              height: "0.875rem",
+              color: "var(--success)",
+            }}
+          />
+          Sync to Google Calendar
+        </button>
+      </div>
+      {showCalendarBanner && (
+        <div className="mb-6 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Google Calendar Sync</p>
+            <p className="text-xs text-foreground/50 mt-0.5">
+              Automatically add your review schedule to Google Calendar coming
+              soon!
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCalendarBanner(false)}
+            className="text-xs text-foreground/40 hover:text-foreground transition-colors cursor-pointer shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {problems.length === 0 ? (
         <p className="text-foreground/60">
@@ -219,13 +257,27 @@ export default function DashboardPage() {
                   onClick={() => openEditForm(p)}
                   className="text-foreground/40 hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <FontAwesomeIcon icon={faPen} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)" }} />
+                  <FontAwesomeIcon
+                    icon={faPen}
+                    style={{
+                      width: "0.875rem",
+                      height: "0.875rem",
+                      color: "var(--success)",
+                    }}
+                  />
                 </button>
                 <button
                   onClick={() => deleteProblem(p.id)}
                   className="text-foreground/40 hover:text-primary transition-colors cursor-pointer"
                 >
-                  <FontAwesomeIcon icon={faTrash} style={{ width: "0.875rem", height: "0.875rem", color: "var(--primary)" }} />
+                  <FontAwesomeIcon
+                    icon={faTrash}
+                    style={{
+                      width: "0.875rem",
+                      height: "0.875rem",
+                      color: "var(--primary)",
+                    }}
+                  />
                 </button>
               </div>
               <p className="font-medium pr-16">{p.title}</p>
