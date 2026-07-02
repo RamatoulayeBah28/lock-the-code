@@ -33,7 +33,7 @@ const PLANS = [
   {
     id: "annual",
     name: "Annual",
-    price: "$79.99",
+    price: "$79",
     interval: "per year · ~$6.67/mo",
     badge: "Best value",
     cta: "Get Annual",
