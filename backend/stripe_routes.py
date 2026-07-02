@@ -86,15 +86,14 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
         event = stripe.Webhook.construct_event(
             payload, sig, settings.stripe_webhook_secret
         )
-    except stripe.error.SignatureVerificationError:
+    except stripe.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid Stripe signature")
 
     cur = db.cursor(cursor_factory=RealDictCursor)
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        metadata = session.metadata or {}
-        clerk_user_id = metadata.get("clerk_user_id")
+        clerk_user_id = getattr(session.metadata, "clerk_user_id", None)
         customer_id = session.customer
         if clerk_user_id:
             cur.execute(
