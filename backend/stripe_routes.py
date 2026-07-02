@@ -10,7 +10,10 @@ router = APIRouter()
 
 
 def get_stripe():
-    stripe.api_key = get_settings().stripe_secret_key
+    key = get_settings().stripe_secret_key
+    if not key:
+        raise HTTPException(status_code=503, detail="Stripe not configured in this environment")
+    stripe.api_key = key
     return stripe
 
 
