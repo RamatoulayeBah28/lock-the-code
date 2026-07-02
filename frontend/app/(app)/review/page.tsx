@@ -2,7 +2,8 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendarDays } from "@fortawesome/free-regular-svg-icons";
 
 type Problem = {
   id: number;
@@ -64,7 +65,7 @@ export default function ReviewPage() {
   if (problem === null) {
     return (
       <div className="p-8 max-w-2xl mx-auto w-full flex flex-col items-center gap-6 py-24 text-center">
-        <CalendarDays className="w-12 h-12 text-foreground/30" />
+        <FontAwesomeIcon icon={faCalendarDays} style={{ width: "3rem", height: "3rem", color: "var(--success)", opacity: 0.4 }} />
         <h1 className="text-2xl font-semibold">No Problems for Today</h1>
         <p className="text-foreground/60">You&apos;re all caught up! Ready to practice something new?</p>
         <a

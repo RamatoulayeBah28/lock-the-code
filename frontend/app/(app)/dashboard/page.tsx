@@ -3,7 +3,8 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 function UpgradeBanner() {
   const searchParams = useSearchParams();
@@ -218,13 +219,13 @@ export default function DashboardPage() {
                   onClick={() => openEditForm(p)}
                   className="text-foreground/40 hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <FontAwesomeIcon icon={faPen} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)" }} />
                 </button>
                 <button
                   onClick={() => deleteProblem(p.id)}
                   className="text-foreground/40 hover:text-primary transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <FontAwesomeIcon icon={faTrash} style={{ width: "0.875rem", height: "0.875rem", color: "var(--primary)" }} />
                 </button>
               </div>
               <p className="font-medium pr-16">{p.title}</p>

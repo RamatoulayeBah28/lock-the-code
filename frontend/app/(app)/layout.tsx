@@ -3,19 +3,27 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck, LayoutDashboard, Bot, Mic, Layers } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCalendarCheck,
+  faList,
+  faRobot,
+  faMicrophone,
+  faLayerGroup,
+  type IconDefinition,
+} from "@fortawesome/free-solid-svg-icons";
 
 type ProStatus = { is_pro: boolean } | null;
 
-const FREE_ITEMS = [
-  { href: "/review", label: "Review Queue", icon: CalendarCheck },
-  { href: "/dashboard", label: "My Problems", icon: LayoutDashboard },
+const FREE_ITEMS: { href: string; label: string; icon: IconDefinition }[] = [
+  { href: "/review", label: "Review Queue", icon: faCalendarCheck },
+  { href: "/dashboard", label: "My Problems", icon: faList },
 ];
 
-const PRO_ITEMS = [
-  { href: "/chat/tutor", label: "Ask Your AI Tutor", icon: Bot },
-  { href: "/chat/interview", label: "Simulate a Real Interview", icon: Mic },
-  { href: "/flashcards", label: "Flashcards", icon: Layers },
+const PRO_ITEMS: { href: string; label: string; icon: IconDefinition }[] = [
+  { href: "/chat/tutor", label: "Ask Your AI Tutor", icon: faRobot },
+  { href: "/chat/interview", label: "Simulate a Real Interview", icon: faMicrophone },
+  { href: "/flashcards", label: "Flashcards", icon: faLayerGroup },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -58,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           Practice
         </p>
-        {FREE_ITEMS.map(({ href, label, icon: Icon }) => {
+        {FREE_ITEMS.map(({ href, label, icon }) => {
           const active = pathname === href;
           return (
             <button
@@ -66,15 +74,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => router.push(href)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
               style={{
-                backgroundColor: active
-                  ? "rgba(86,135,109,0.25)"
-                  : "transparent",
+                backgroundColor: active ? "rgba(86,135,109,0.25)" : "transparent",
                 color: active ? "var(--success)" : "rgba(255,255,255,0.75)",
               }}
             >
-              <Icon
-                className="w-4 h-4 shrink-0"
-                style={{ color: "var(--success)" }}
+              <FontAwesomeIcon
+                icon={icon}
+                style={{ color: "var(--success)", width: "1rem", height: "1rem" }}
               />
               {label}
             </button>
@@ -82,19 +88,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })}
 
         {/* Divider */}
-        <div
-          className="my-4 border-t"
-          style={{ borderColor: "rgba(255,255,255,0.1)" }}
-        />
+        <div className="my-4 border-t" style={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
         {/* Pro nav items */}
         <p
-          className="text-xs font-semibold uppercase tracking-widest px-3 mb-2 flex items-center gap-2"
+          className="text-xs font-semibold uppercase tracking-widest px-3 mb-2"
           style={{ color: "rgba(255,255,255,0.35)" }}
         >
           Lock In
         </p>
-        {PRO_ITEMS.map(({ href, label, icon: Icon }) => {
+        {PRO_ITEMS.map(({ href, label, icon }) => {
           const active = pathname === href;
           return (
             <button
@@ -106,9 +109,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 color: active ? "var(--accent)" : "rgba(255,255,255,0.75)",
               }}
             >
-              <Icon
-                className="w-4 h-4 shrink-0"
-                style={{ color: "var(--accent)" }}
+              <FontAwesomeIcon
+                icon={icon}
+                style={{ color: "var(--accent)", width: "1rem", height: "1rem" }}
               />
               {label}
             </button>

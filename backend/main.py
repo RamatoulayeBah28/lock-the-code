@@ -6,6 +6,7 @@ from config import get_settings
 from db import get_db
 from schemas import ProblemCreate, ProblemUpdate, ReviewCreate
 from stripe_routes import router as stripe_router
+from chat_routes import router as chat_router
 from psycopg2.extras import RealDictCursor
 
 
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(stripe_router)
+app.include_router(chat_router)
 
 
 @app.get("/me")

@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth, SignUpButton } from "@clerk/nextjs";
-import { Check } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -111,7 +112,7 @@ export default function PricingPage() {
                 key={f}
                 className="flex items-start gap-2 text-sm text-foreground/70"
               >
-                <Check className="w-4 h-4 text-success mt-0.5 shrink-0" />
+                <FontAwesomeIcon icon={faCheck} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)", marginTop: "0.125rem", flexShrink: 0 }} />
                 {f}
               </li>
             ))}
@@ -152,7 +153,7 @@ export default function PricingPage() {
                   key={f}
                   className="flex items-start gap-2 text-sm text-foreground/70"
                 >
-                  <Check className="w-4 h-4 text-success mt-0.5 shrink-0" />
+                  <FontAwesomeIcon icon={faCheck} style={{ width: "0.875rem", height: "0.875rem", color: "var(--success)", marginTop: "0.125rem", flexShrink: 0 }} />
                   {f}
                 </li>
               ))}
