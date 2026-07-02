@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000", "http://localhost:3001"]
     stripe_secret_key: str
     stripe_webhook_secret: str
-    stripe_price_monthly: str = "price_1ToUzX7vz5P4p4bDMYgT7Zwd"
-    stripe_price_annual: str = "price_1ToUzX7vz5P4p4bDGrZnsnq4"
-    stripe_price_lifetime: str = "price_1ToUzX7vz5P4p4bD0Lsi6unN"
+    stripe_price_monthly: str = "price_1ToUzX7vz5P4p4bDGrZnsnq4"
+    stripe_price_annual: str = "price_1ToUzX7vz5P4p4bD0Lsi6unN"
+    stripe_price_lifetime: str = "price_1ToUzX7vz5P4p4bDMYgT7Zwd"
     stripe_price_trial: str = "price_1ToVFl7vz5P4p4bDjwBz0PN0"
     stripe_trial_id: str = "to_1ToVGQ7vz5P4p4bDosyTKMVh"
 
