@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     clerk_authorized_parties: Annotated[list[str], NoDecode] = []
     clerk_webhook_signing_secret: str | None = None
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000", "http://localhost:3001"]
+    frontend_url: str = "http://localhost:3000"
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
     anthropic_api_key: str | None = None

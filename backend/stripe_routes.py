@@ -52,8 +52,8 @@ def create_checkout_session(
     session_params: dict = {
         "line_items": [{"price": price_id, "quantity": 1}],
         "mode": "payment" if is_lifetime else "subscription",
-        "success_url": f"{settings.cors_origins[0]}/dashboard?upgrade=success",
-        "cancel_url": f"{settings.cors_origins[0]}/",
+        "success_url": f"{settings.frontend_url}/dashboard?upgrade=success",
+        "cancel_url": f"{settings.frontend_url}/",
         "metadata": {"clerk_user_id": user["id"]},
     }
 
