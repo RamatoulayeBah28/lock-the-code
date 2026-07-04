@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 
@@ -12,6 +13,7 @@ type Props = {
 
 export default function PaywallModal({ featureLabel, onClose }: Props) {
   const router = useRouter();
+  const ph = usePostHog();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -56,14 +58,20 @@ export default function PaywallModal({ featureLabel, onClose }: Props) {
         </div>
 
         <button
-          onClick={() => router.push("/pricing")}
+          onClick={() => {
+            ph?.capture("upgrade_clicked", { source: "paywall_modal", feature: featureLabel });
+            router.push("/pricing");
+          }}
           className="w-full rounded-full bg-primary text-primary-foreground font-medium text-sm h-11 cursor-pointer transition-opacity hover:opacity-90"
         >
           Start Free Trial
         </button>
 
         <button
-          onClick={onClose}
+          onClick={() => {
+            ph?.capture("paywall_dismissed", { feature: featureLabel });
+            onClose();
+          }}
           aria-label="Close upgrade dialog"
           className="text-sm text-foreground/60 hover:text-foreground/75 transition-colors cursor-pointer"
         >

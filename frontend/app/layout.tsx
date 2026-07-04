@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
 import {
   ClerkProvider,
@@ -9,6 +8,7 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
+import PostHogProvider from "@/app/components/PostHogProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -38,6 +38,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-surface text-foreground">
         <ClerkProvider>
+          <PostHogProvider>
           <header className="flex justify-between items-center px-6 h-16 border-b border-foreground/10 shrink-0">
             <Link href="/" className="font-semibold text-lg tracking-tight">
               Lock The Code
@@ -63,6 +64,7 @@ export default function RootLayout({
             </div>
           </header>
           {children}
+          </PostHogProvider>
         </ClerkProvider>
       </body>
     </html>

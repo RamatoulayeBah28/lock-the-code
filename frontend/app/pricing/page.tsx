@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 
 const FREE_FEATURES = [
   "Unlimited problem tracking",
@@ -54,10 +55,12 @@ const PLANS = [
 export default function PricingPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
+  const ph = usePostHog();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function checkout(plan: string) {
+    ph?.capture("upgrade_clicked", { source: "pricing_page", plan });
     setLoading(plan);
     setError(null);
     try {

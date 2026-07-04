@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState, Suspense } from "react";
+import { usePostHog } from "posthog-js/react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -32,6 +33,7 @@ type Problem = {
 
 export default function DashboardPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
+  const ph = usePostHog();
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCalendarBanner, setShowCalendarBanner] = useState(false);
@@ -176,6 +178,7 @@ export default function DashboardPage() {
       }
       const created = await res.json();
       setProblems([...(problems ?? []), created]);
+      ph?.capture("problem_added", { difficulty, topics: selectedTopics.length, patterns: selectedPatterns.length });
     }
 
     closeForm();

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarDays } from "@fortawesome/free-regular-svg-icons";
 
@@ -25,6 +26,7 @@ const CONFIDENCE_LABELS: { label: string; value: number }[] = [
 
 export default function ReviewPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
+  const ph = usePostHog();
   const [problem, setProblem] = useState<Problem | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -60,6 +62,7 @@ export default function ReviewPage() {
       body: JSON.stringify({ confidence }),
     });
     if (!res.ok) { setError(`Request failed: ${res.status}`); setSubmitting(false); return; }
+    ph?.capture("review_submitted", { confidence, problem_title: problem.title, difficulty: problem.difficulty });
     await fetchTodaysProblem();
     setSubmitting(false);
   }
