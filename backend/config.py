@@ -16,11 +16,11 @@ class Settings(BaseSettings):
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
     anthropic_api_key: str | None = None
-    stripe_price_monthly: str = "price_1ToUzX7vz5P4p4bDGrZnsnq4"
-    stripe_price_annual: str = "price_1ToUzX7vz5P4p4bD0Lsi6unN"
-    stripe_price_lifetime: str = "price_1ToUzX7vz5P4p4bDMYgT7Zwd"
-    stripe_price_trial: str = "price_1ToVFl7vz5P4p4bDjwBz0PN0"
-    stripe_trial_id: str = "to_1ToVGQ7vz5P4p4bDosyTKMVh"
+    stripe_price_monthly: str = "price_1TpWY16zyw6RqhWJxmHWQWCs"
+    stripe_price_annual: str = "price_1TpWY16zyw6RqhWJbW0plVaC"
+    stripe_price_lifetime: str = "price_1TpWY26zyw6RqhWJ464D15Ag"
+    stripe_price_trial: str = "price_1TpWY06zyw6RqhWJi4Lo16Dt"
+    stripe_trial_id: str = "to_1TpXF56zyw6RqhWJZJQkIJw5"
 
     @field_validator("clerk_authorized_parties", "cors_origins", mode="before")
     @classmethod
