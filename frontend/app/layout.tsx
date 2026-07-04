@@ -24,9 +24,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Lock The Code",
   description: "The only free technical interview study plan you need.",
-  icons: {
-    icon: "/lock-the-code-fav.png",
-  },
 };
 
 export default function RootLayout({
