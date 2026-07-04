@@ -84,8 +84,8 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="p-8 max-w-5xl mx-auto w-full">
-      <div className="text-center mb-12">
+    <main className="px-4 py-6 sm:p-8 max-w-5xl mx-auto w-full">
+      <div className="text-center mb-8 sm:mb-12">
         <h1 className="text-3xl sm:text-4xl font-semibold mb-3">
           Lock in your interview prep
         </h1>

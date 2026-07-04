@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCalendarBanner, setShowCalendarBanner] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
   const [title, setTitle] = useState("");
@@ -181,6 +182,7 @@ export default function DashboardPage() {
   }
 
   async function deleteProblem(id: number) {
+    setDeletingId(id);
     const token = await getToken();
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/problems/${id}`,
@@ -191,18 +193,39 @@ export default function DashboardPage() {
     );
     if (!res.ok) {
       setError(`Request failed: ${res.status}`);
+      setDeletingId(null);
       return;
     }
     setProblems((problems ?? []).filter((p) => p.id !== id));
+    setDeletingId(null);
   }
 
   if (!isLoaded) return <p className="p-8">Loading...</p>;
   if (!isSignedIn) return <p className="p-8">Sign in to see your problems.</p>;
   if (error) return <p className="p-8 text-red-600">{error}</p>;
-  if (problems === null) return <p className="p-8">Loading your problems...</p>;
+  if (problems === null)
+    return (
+      <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-7 w-36 rounded bg-foreground/10 animate-pulse" />
+          <div className="h-9 w-40 rounded-full bg-foreground/10 animate-pulse" />
+        </div>
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-foreground/10 p-4"
+            >
+              <div className="h-5 w-3/4 rounded bg-foreground/10 animate-pulse mb-2" />
+              <div className="h-4 w-1/2 rounded bg-foreground/10 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </main>
+    );
 
   return (
-    <main className="p-8 max-w-2xl mx-auto w-full">
+    <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
       <Suspense fallback={null}>
         <UpgradeBanner />
       </Suspense>
@@ -220,7 +243,7 @@ export default function DashboardPage() {
               color: "var(--success)",
             }}
           />
-          Sync to Google Calendar
+          <span className="hidden sm:inline">Sync to Google Calendar</span>
         </button>
       </div>
       {showCalendarBanner && (
@@ -268,7 +291,8 @@ export default function DashboardPage() {
                 </button>
                 <button
                   onClick={() => deleteProblem(p.id)}
-                  className="text-foreground/40 hover:text-primary transition-colors cursor-pointer"
+                  disabled={deletingId === p.id}
+                  className="text-foreground/40 hover:text-primary transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <FontAwesomeIcon
                     icon={faTrash}

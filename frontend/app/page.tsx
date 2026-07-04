@@ -24,7 +24,7 @@ export default function Home() {
             alt="Lock The Code"
             width={400}
             height={260}
-            className="object-contain"
+            className="object-contain w-full max-w-[400px]"
           />
           <h1 className="max-w-xl text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-foreground">
             The Only Free Technical Interview Study Plan You Need

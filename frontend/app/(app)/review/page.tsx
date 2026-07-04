@@ -28,6 +28,7 @@ export default function ReviewPage() {
   const [problem, setProblem] = useState<Problem | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const today = new Date().getDate();
 
   useEffect(() => {
@@ -36,31 +37,53 @@ export default function ReviewPage() {
   }, [isLoaded, isSignedIn]);
 
   async function fetchTodaysProblem() {
-    const token = await getToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/today`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
-    setProblem(await res.json());
-    setExpanded(false);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/today`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+      setProblem(await res.json());
+      setExpanded(false);
+    } catch (e) {
+      setError(String(e));
+    }
   }
 
   async function submitReview(confidence: number) {
-    if (!problem) return;
+    if (!problem || submitting) return;
+    setSubmitting(true);
     const token = await getToken();
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${problem.id}/review`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ confidence }),
     });
-    if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
-    fetchTodaysProblem();
+    if (!res.ok) { setError(`Request failed: ${res.status}`); setSubmitting(false); return; }
+    await fetchTodaysProblem();
+    setSubmitting(false);
   }
 
   if (!isLoaded) return <p className="p-8">Loading...</p>;
   if (!isSignedIn) return <p className="p-8">Sign in to start reviewing.</p>;
   if (error) return <p className="p-8 text-red-600">{error}</p>;
-  if (problem === undefined) return <p className="p-8">Loading your review queue...</p>;
+  if (problem === undefined)
+    return (
+      <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
+        <div className="rounded-xl border border-foreground/10 p-6">
+          <div className="h-4 w-14 rounded bg-foreground/10 animate-pulse mx-auto mb-4" />
+          <div className="h-6 w-2/3 rounded bg-foreground/10 animate-pulse mx-auto" />
+        </div>
+        <div className="mt-6">
+          <div className="h-4 w-28 rounded bg-foreground/10 animate-pulse mb-3" />
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-10 w-20 rounded-full bg-foreground/10 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
 
   if (problem === null) {
     return (
@@ -79,7 +102,7 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto w-full">
+    <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
       <button
         onClick={() => setExpanded((e) => !e)}
         className="w-full text-left rounded-xl border border-foreground/10 p-6 cursor-pointer hover:border-foreground/20 transition-colors"
@@ -112,7 +135,8 @@ export default function ReviewPage() {
             <button
               key={value}
               onClick={() => submitReview(value)}
-              className="rounded-full border border-foreground/20 px-5 h-10 text-sm font-medium cursor-pointer transition-opacity hover:opacity-70"
+              disabled={submitting}
+              className="rounded-full border border-foreground/20 px-5 h-10 text-sm font-medium cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {label}
             </button>

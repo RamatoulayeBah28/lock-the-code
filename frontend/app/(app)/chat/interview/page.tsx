@@ -64,11 +64,14 @@ export default function InterviewPage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [timerStarted, setTimerStarted] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const mobileBottomRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    mobileBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
@@ -151,7 +154,6 @@ export default function InterviewPage() {
     userText: string | null,
     contextOverride?: object,
   ) {
-    // null = initial greeting trigger; Anthropic requires at least one message
     const apiMessages: Message[] =
       userText === null
         ? [{ role: "user", content: "Let's begin the interview!" }]
@@ -248,7 +250,7 @@ export default function InterviewPage() {
   // ── Select problem source ────────────────────────────────────────────────
   if (phase.type === "selecting_problem") {
     return (
-      <div className="p-8 max-w-xl mx-auto flex flex-col gap-6">
+      <div className="p-4 sm:p-8 max-w-xl mx-auto flex flex-col gap-6">
         <div className="flex items-center gap-3">
           <MicIcon />
           <h1 className="text-2xl font-semibold">Simulate a Real Interview</h1>
@@ -286,7 +288,7 @@ export default function InterviewPage() {
   // ── Select level ────────────────────────────────────────────────────────
   if (phase.type === "selecting_level") {
     return (
-      <div className="p-8 max-w-xl mx-auto flex flex-col gap-6">
+      <div className="p-4 sm:p-8 max-w-xl mx-auto flex flex-col gap-6">
         <div className="flex items-center gap-3">
           <MicIcon />
           <h1 className="text-2xl font-semibold">
@@ -320,7 +322,7 @@ export default function InterviewPage() {
   // ── Select company ──────────────────────────────────────────────────────
   if (phase.type === "selecting_company") {
     return (
-      <div className="p-8 max-w-xl mx-auto flex flex-col gap-6">
+      <div className="p-4 sm:p-8 max-w-xl mx-auto flex flex-col gap-6">
         <div className="flex items-center gap-3">
           <MicIcon />
           <h1 className="text-2xl font-semibold">Any specific company?</h1>
@@ -378,26 +380,102 @@ export default function InterviewPage() {
         ? "text-yellow-600"
         : "text-success";
 
+  const ChatMessages = (
+    <>
+      {messages.map((m, i) => (
+        <div
+          key={i}
+          className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+        >
+          <div
+            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+              m.role === "user"
+                ? "bg-primary text-primary-foreground"
+                : "bg-foreground/5 text-foreground"
+            }`}
+          >
+            {m.content || (streaming && i === messages.length - 1 ? "▌" : "")}
+          </div>
+        </div>
+      ))}
+      {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+    </>
+  );
+
+  const ChatInput = (
+    <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0">
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        placeholder="Reply to interviewer..."
+        disabled={streaming || secondsLeft === 0}
+        className="flex-1 rounded-full border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+      />
+      <button
+        onClick={handleSend}
+        disabled={!input.trim() || streaming || secondsLeft === 0}
+        className="rounded-full bg-primary text-primary-foreground w-9 h-9 flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+      >
+        <FontAwesomeIcon
+          icon={faPaperPlane}
+          style={{ width: "0.875rem", height: "0.875rem" }}
+        />
+      </button>
+    </div>
+  );
+
+  const CodePanel = (
+    <>
+      <div className="px-4 py-2 border-b border-foreground/10 text-xs text-foreground/40 font-mono shrink-0">
+        code editor
+      </div>
+      <textarea
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        onKeyDown={handleCodeKeyDown}
+        spellCheck={false}
+        placeholder="// Write your solution here..."
+        className="flex-1 resize-none p-4 font-mono text-sm focus:outline-none bg-foreground/[0.02]"
+        style={{ tabSize: 4 }}
+      />
+    </>
+  );
+
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-foreground/10 px-6 py-3 flex items-center gap-3 shrink-0">
+      {/* Header */}
+      <div className="border-b border-foreground/10 px-4 sm:px-6 py-3 flex items-center gap-3 shrink-0">
         <FontAwesomeIcon
           icon={faMicrophone}
           style={{ width: "1rem", height: "1rem", color: "var(--accent)" }}
         />
         <span className="text-sm font-medium">Mock Interview</span>
         <span className="text-sm text-foreground/40">·</span>
-        <span className="text-sm text-foreground/60">{phase.level}</span>
+        <span className="text-sm text-foreground/60 truncate max-w-[90px] sm:max-w-none">
+          {phase.level}
+        </span>
         {phase.company !== "any company" && (
           <>
-            <span className="text-sm text-foreground/40">·</span>
-            <span className="text-sm text-foreground/60">{phase.company}</span>
+            <span className="hidden sm:inline text-sm text-foreground/40">
+              ·
+            </span>
+            <span className="hidden sm:inline text-sm text-foreground/60 truncate">
+              {phase.company}
+            </span>
           </>
         )}
         <div className="ml-auto flex items-center gap-3">
+          {/* Desktop-only code toggle */}
           <button
             onClick={() => setShowCode((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
           >
             <FontAwesomeIcon
               icon={faCode}
@@ -417,76 +495,62 @@ export default function InterviewPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Mobile tab switcher */}
+      <div className="md:hidden flex border-b border-foreground/10 shrink-0">
+        <button
+          onClick={() => setMobileTab("chat")}
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+            mobileTab === "chat"
+              ? "text-foreground border-b-2 border-primary -mb-px"
+              : "text-foreground/40"
+          }`}
+        >
+          Chat
+        </button>
+        <button
+          onClick={() => setMobileTab("code")}
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+            mobileTab === "code"
+              ? "text-foreground border-b-2 border-primary -mb-px"
+              : "text-foreground/40"
+          }`}
+        >
+          Code
+        </button>
+      </div>
+
+      {/* Mobile layout — single panel at a time */}
+      <div className="md:hidden flex flex-col flex-1 overflow-hidden">
+        {mobileTab === "chat" ? (
+          <>
+            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+              {ChatMessages}
+              <div ref={mobileBottomRef} />
+            </div>
+            {ChatInput}
+          </>
+        ) : (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {CodePanel}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop layout — side by side */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
         <div
           className={`flex flex-col ${showCode ? "w-1/2" : "flex-1"} border-r border-foreground/10`}
         >
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-foreground/5 text-foreground"
-                  }`}
-                >
-                  {m.content ||
-                    (streaming && i === messages.length - 1 ? "▌" : "")}
-                </div>
-              </div>
-            ))}
-            {error && (
-              <p className="text-red-600 text-sm text-center">{error}</p>
-            )}
+            {ChatMessages}
             <div ref={bottomRef} />
           </div>
-
-          <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Reply to interviewer..."
-              disabled={streaming || secondsLeft === 0}
-              className="flex-1 rounded-full border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || streaming || secondsLeft === 0}
-              className="rounded-full bg-primary text-primary-foreground w-9 h-9 flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            >
-              <FontAwesomeIcon
-                icon={faPaperPlane}
-                style={{ width: "0.875rem", height: "0.875rem" }}
-              />
-            </button>
-          </div>
+          {ChatInput}
         </div>
 
-        <div className="w-1/2 flex flex-col">
-          <div className="px-4 py-2 border-b border-foreground/10 text-xs text-foreground/40 font-mono">
-            code editor
-          </div>
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            onKeyDown={handleCodeKeyDown}
-            spellCheck={false}
-            placeholder="// Write your solution here..."
-            className="flex-1 resize-none p-4 font-mono text-sm focus:outline-none bg-foreground/[0.02]"
-            style={{ tabSize: 4 }}
-          />
-        </div>
+        {showCode && (
+          <div className="w-1/2 flex flex-col">{CodePanel}</div>
+        )}
       </div>
     </div>
   );
