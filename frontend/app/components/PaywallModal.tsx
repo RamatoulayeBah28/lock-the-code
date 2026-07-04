@@ -59,15 +59,15 @@ export default function PaywallModal({ featureLabel, onClose }: Props) {
           onClick={() => router.push("/pricing")}
           className="w-full rounded-full bg-primary text-primary-foreground font-medium text-sm h-11 cursor-pointer transition-opacity hover:opacity-90"
         >
-          Start Free Trial →
+          Start Free Trial
         </button>
 
         <button
           onClick={onClose}
           aria-label="Close upgrade dialog"
-          className="text-xs text-foreground/35 hover:text-foreground/60 transition-colors cursor-pointer"
+          className="text-sm text-foreground/60 hover:text-foreground/75 transition-colors cursor-pointer"
         >
-          I&apos;m not ready to get hired.
+          I&apos;m not ready to get hired...
         </button>
       </div>
     </div>
