@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import PaywallModal from "@/app/components/PaywallModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarCheck,
@@ -64,6 +65,7 @@ const PRO_ITEMS: {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const [proStatus, setProStatus] = useState<ProStatus>(null);
+  const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -84,9 +86,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fetchMe();
   }, [isLoaded, isSignedIn, getToken]);
 
-  function handleProClick(href: string) {
+  function handleProClick(href: string, label: string) {
     if (!proStatus?.is_pro) {
-      router.push("/pricing");
+      setPaywallFeature(label);
       return;
     }
     router.push(href);
@@ -148,7 +150,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           return (
             <button
               key={href}
-              onClick={() => handleProClick(href)}
+              onClick={() => handleProClick(href, label)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
               style={{
                 backgroundColor: active
@@ -210,12 +212,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
             );
           })}
-          {PRO_ITEMS.map(({ href, shortLabel, icon }) => {
+          {PRO_ITEMS.map(({ href, label, shortLabel, icon }) => {
             const active = pathname === href;
             return (
               <button
                 key={href}
-                onClick={() => handleProClick(href)}
+                onClick={() => handleProClick(href, label)}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer"
                 style={{ opacity: active ? 1 : 0.4 }}
               >
@@ -237,6 +239,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+      )}
+      {paywallFeature && (
+        <PaywallModal
+          featureLabel={paywallFeature}
+          onClose={() => setPaywallFeature(null)}
+        />
       )}
     </div>
   );
