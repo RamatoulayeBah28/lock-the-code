@@ -8,6 +8,7 @@ import {
   faPaperPlane,
   faStopwatch,
   faStop,
+  faPlay,
 } from "@fortawesome/free-solid-svg-icons";
 import Editor from "@monaco-editor/react";
 
@@ -101,6 +102,10 @@ export default function InterviewPage() {
   const [secondsLeft, setSecondsLeft] = useState(() => _restored?.secondsLeft ?? 0);
   const [timerStarted, setTimerStarted] = useState(() => _restored?.timerStarted ?? false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
+  const [endConfirm, setEndConfirm] = useState(false);
+  const [codeRunning, setCodeRunning] = useState(false);
+  const [codeOutput, setCodeOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null);
+  const [showConsole, setShowConsole] = useState(false);
 
   // Voice input
   const [isListening, setIsListening] = useState(false);
@@ -437,6 +442,55 @@ export default function InterviewPage() {
     }
   }
 
+  async function runCode() {
+    if (!code.trim() || codeRunning) return;
+    setCodeRunning(true);
+    setShowConsole(true);
+    setCodeOutput(null);
+    const langMap: Record<string, string> = {
+      python: "python", javascript: "javascript", typescript: "typescript",
+      java: "java", cpp: "c++", go: "go",
+    };
+    const fileMap: Record<string, string> = {
+      python: "main.py", javascript: "main.js", typescript: "main.ts",
+      java: "Main.java", cpp: "main.cpp", go: "main.go",
+    };
+    try {
+      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: langMap[language] ?? language,
+          version: "*",
+          files: [{ name: fileMap[language] ?? "main.txt", content: code }],
+        }),
+      });
+      if (!res.ok) throw new Error("Code runner unavailable");
+      const data = await res.json();
+      setCodeOutput({
+        stdout: data.run?.stdout ?? "",
+        stderr: data.run?.stderr ?? data.compile?.stderr ?? "",
+        exitCode: data.run?.code ?? 0,
+      });
+    } catch (e) {
+      setCodeOutput({ stdout: "", stderr: String(e), exitCode: 1 });
+    } finally {
+      setCodeRunning(false);
+    }
+  }
+
+  function endInterview() {
+    setEndConfirm(false);
+    if (phase.type !== "interviewing") return;
+    streamMessage(
+      messages,
+      phase.level,
+      phase.company,
+      phase.timeLimit,
+      "I'd like to end the interview now and move to the feedback session.",
+    );
+  }
+
   function handleSend() {
     if (!input.trim() || streaming || phase.type !== "interviewing") return;
     if (isListening) handleStopOnly();
@@ -721,6 +775,7 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
 
   const CodePanel = (
     <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "#1e1e1e" }}>
+      {/* Toolbar */}
       <div
         className="flex items-center gap-2 px-3 py-1.5 shrink-0"
         style={{ background: "#252526", borderBottom: "1px solid #3c3c3c" }}
@@ -735,25 +790,80 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
+        <button
+          onClick={runCode}
+          disabled={codeRunning || !code.trim()}
+          className="flex items-center gap-1 text-xs rounded px-2 py-0.5 cursor-pointer disabled:opacity-40 transition-opacity hover:opacity-80 ml-auto"
+          style={{ background: "#0e7a0d", color: "white" }}
+        >
+          <FontAwesomeIcon icon={faPlay} style={{ width: "0.55rem", height: "0.55rem" }} />
+          {codeRunning ? "Running…" : "Run"}
+        </button>
       </div>
-      <Editor
-        height="100%"
-        language={language}
-        theme="vs-dark"
-        value={code}
-        onChange={(val) => setCode(val ?? "")}
-        options={{
-          fontSize: 13,
-          fontFamily: "Consolas, 'Courier New', monospace",
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          lineNumbers: "on",
-          wordWrap: "on",
-          tabSize: 4,
-          padding: { top: 12 },
-          overviewRulerLanes: 0,
-        }}
-      />
+
+      {/* Editor */}
+      <div className="flex-1 overflow-hidden min-h-0">
+        <Editor
+          height="100%"
+          language={language}
+          theme="vs-dark"
+          value={code}
+          onChange={(val) => setCode(val ?? "")}
+          options={{
+            fontSize: 13,
+            fontFamily: "Consolas, 'Courier New', monospace",
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            lineNumbers: "on",
+            wordWrap: "on",
+            tabSize: 4,
+            padding: { top: 12 },
+            overviewRulerLanes: 0,
+          }}
+        />
+      </div>
+
+      {/* Console */}
+      {showConsole && (
+        <div className="shrink-0 flex flex-col" style={{ borderTop: "1px solid #3c3c3c", maxHeight: "200px" }}>
+          <div
+            className="flex items-center justify-between px-3 py-1 shrink-0"
+            style={{ background: "#252526", borderBottom: "1px solid #3c3c3c" }}
+          >
+            <span className="text-xs font-medium" style={{ color: "#cccccc" }}>Console</span>
+            <div className="flex items-center gap-3">
+              {codeOutput && (
+                <span className="text-xs font-mono" style={{ color: codeOutput.exitCode === 0 ? "#4ec9b0" : "#f48771" }}>
+                  exit {codeOutput.exitCode}
+                </span>
+              )}
+              <button
+                onClick={() => setShowConsole(false)}
+                className="text-xs cursor-pointer hover:opacity-60 transition-opacity"
+                style={{ color: "#858585" }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div
+            className="overflow-y-auto p-3 font-mono text-xs"
+            style={{ background: "#1e1e1e", color: "#cccccc", minHeight: "72px", maxHeight: "160px" }}
+          >
+            {codeRunning ? (
+              <span style={{ color: "#858585" }}>Running…</span>
+            ) : codeOutput ? (
+              <>
+                {codeOutput.stdout && <pre className="whitespace-pre-wrap">{codeOutput.stdout}</pre>}
+                {codeOutput.stderr && <pre className="whitespace-pre-wrap" style={{ color: "#f48771" }}>{codeOutput.stderr}</pre>}
+                {!codeOutput.stdout && !codeOutput.stderr && (
+                  <span style={{ color: "#858585" }}>No output</span>
+                )}
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -779,6 +889,13 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
           </>
         )}
         <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => setEndConfirm(true)}
+            disabled={streaming}
+            className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors disabled:opacity-40 shrink-0"
+          >
+            End interview
+          </button>
           <div
             className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${timerColor}`}
           >
@@ -841,6 +958,43 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
         </div>
         <div className="w-1/2 flex flex-col">{CodePanel}</div>
       </div>
+
+      {/* End interview confirm modal */}
+      {endConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={() => setEndConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-8 flex flex-col gap-5"
+            style={{ backgroundColor: "var(--surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-semibold">End interview?</h2>
+              <p className="text-sm text-foreground/60">
+                Are you sure you want to end the interview now? The AI will move
+                straight to the feedback session.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEndConfirm(false)}
+                className="flex-1 rounded-full border border-foreground/20 text-sm font-medium py-2.5 cursor-pointer hover:border-foreground/40 transition-colors"
+              >
+                Keep going
+              </button>
+              <button
+                onClick={endInterview}
+                className="flex-1 rounded-full bg-primary text-primary-foreground text-sm font-medium py-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                End interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
