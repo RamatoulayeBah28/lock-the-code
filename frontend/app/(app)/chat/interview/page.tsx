@@ -7,7 +7,6 @@ import {
   faMicrophone,
   faPaperPlane,
   faStopwatch,
-  faCode,
   faStop,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -64,7 +63,6 @@ export default function InterviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [timerStarted, setTimerStarted] = useState(false);
-  const [showCode, setShowCode] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
 
   // Voice input
@@ -89,6 +87,12 @@ export default function InterviewPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const mobileBottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset textarea height when input is cleared programmatically (e.g. after voice submit)
+  useEffect(() => {
+    if (!input && inputRef.current) inputRef.current.style.height = "auto";
+  }, [input]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -503,20 +507,27 @@ export default function InterviewPage() {
   );
 
   const ChatInput = (
-    <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0 items-center">
-      <input
-        type="text"
+    <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0 items-end">
+      <textarea
+        ref={inputRef}
+        rows={1}
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => {
+          setInput(e.target.value);
+          e.target.style.height = "auto";
+          e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+            if (inputRef.current) inputRef.current.style.height = "auto";
           }
         }}
         placeholder={isListening ? "Listening..." : "Reply to interviewer..."}
         disabled={inputDisabled}
-        className="flex-1 rounded-full border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+        className="flex-1 rounded-2xl border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 resize-none overflow-hidden"
+        style={{ maxHeight: "120px" }}
       />
 
       {/* Mic button */}
@@ -582,20 +593,31 @@ export default function InterviewPage() {
   );
 
   const CodePanel = (
-    <>
-      <div className="px-4 py-2 border-b border-foreground/10 text-xs text-foreground/40 font-mono shrink-0">
-        code editor
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "#1e1e1e" }}>
+      <div
+        className="px-4 py-2 shrink-0 text-xs font-mono"
+        style={{ background: "#252526", color: "#858585", borderBottom: "1px solid #3c3c3c" }}
+      >
+        solution.py
       </div>
       <textarea
         value={code}
         onChange={(e) => setCode(e.target.value)}
         onKeyDown={handleCodeKeyDown}
         spellCheck={false}
-        placeholder="// Write your solution here..."
-        className="flex-1 resize-none p-4 font-mono text-sm focus:outline-none bg-foreground/[0.02]"
-        style={{ tabSize: 4 }}
+        placeholder="# Write your solution here..."
+        className="flex-1 resize-none p-4 focus:outline-none"
+        style={{
+          background: "#1e1e1e",
+          color: "#d4d4d4",
+          fontFamily: "Consolas, 'Courier New', monospace",
+          fontSize: "13px",
+          lineHeight: "1.6",
+          tabSize: 4,
+          caretColor: "#aeafad",
+        }}
       />
-    </>
+    </div>
   );
 
   return (
@@ -620,16 +642,6 @@ export default function InterviewPage() {
           </>
         )}
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={() => setShowCode((v) => !v)}
-            className="hidden md:flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
-          >
-            <FontAwesomeIcon
-              icon={faCode}
-              style={{ width: "0.875rem", height: "0.875rem" }}
-            />
-            {showCode ? "Hide" : "Code"}
-          </button>
           <div
             className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${timerColor}`}
           >
@@ -683,21 +695,16 @@ export default function InterviewPage() {
         )}
       </div>
 
-      {/* Desktop layout */}
+      {/* Desktop layout — always split */}
       <div className="hidden md:flex flex-1 overflow-hidden">
-        <div
-          className={`flex flex-col ${showCode ? "w-1/2" : "flex-1"} border-r border-foreground/10`}
-        >
+        <div className="flex flex-col w-1/2 border-r border-foreground/10">
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
             {ChatMessages}
             <div ref={bottomRef} />
           </div>
           {ChatInput}
         </div>
-
-        {showCode && (
-          <div className="w-1/2 flex flex-col">{CodePanel}</div>
-        )}
+        <div className="w-1/2 flex flex-col">{CodePanel}</div>
       </div>
     </div>
   );
