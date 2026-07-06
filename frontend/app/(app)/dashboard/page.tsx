@@ -285,10 +285,9 @@ export default function DashboardPage() {
           {/* Apple Calendar */}
           <div className="relative group">
             <button
-              onClick={() => handleCalendarSync("apple")}
-              disabled={!calendarIcsUrl}
-              className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
-              aria-label="Sync to Apple Calendar"
+              disabled
+              className="flex items-center justify-center opacity-40 cursor-not-allowed"
+              aria-label="Sync to Apple Calendar (coming soon)"
             >
               <Image
                 src="/apple-cal-icon.png"
@@ -298,7 +297,7 @@ export default function DashboardPage() {
               />
             </button>
             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Sync to Apple Calendar
+              Apple Calendar — coming soon
             </span>
           </div>
         </div>
