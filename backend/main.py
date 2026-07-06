@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 import hashlib
 import hmac
 import requests
@@ -8,7 +8,7 @@ import resend
 from auth import get_current_user
 from config import get_settings
 from db import get_db
-from schemas import ProblemCreate, ProblemUpdate, ReviewCreate
+from schemas import ProblemCreate, ProblemUpdate, ReviewCreate, NotificationSettings
 from stripe_routes import router as stripe_router
 from chat_routes import router as chat_router
 from psycopg2.extras import RealDictCursor
@@ -235,10 +235,6 @@ def review_problem(problem_id: int, payload: ReviewCreate, user=Depends(get_curr
 @app.post("/notify/daily")
 def notify_daily(request: Request, db=Depends(get_db)):
     settings = get_settings()
-    print(type(settings))
-    print(settings.model_dump())
-    print(hasattr(settings, "notify_secret"))
-    print(dir(settings))
 
     if request.headers.get("NOTIFY_SECRET") != settings.notify_secret:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -247,10 +243,13 @@ def notify_daily(request: Request, db=Depends(get_db)):
 
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
-        "SELECT user_id, array_agg(title ORDER BY next_review_at) AS titles "
-        "FROM problems "
-        "WHERE next_review_at::date <= CURRENT_DATE "
-        "GROUP BY user_id"
+        "SELECT p.user_id, array_agg(p.title ORDER BY p.next_review_at) AS titles "
+        "FROM problems p "
+        "JOIN users u ON p.user_id = u.id "
+        "WHERE p.next_review_at::date <= CURRENT_DATE "
+        "AND u.email_notifications_enabled = TRUE "
+        "AND u.email_notification_hour = EXTRACT(HOUR FROM now() AT TIME ZONE 'UTC')::int "
+        "GROUP BY p.user_id"
     )
     rows = cur.fetchall()
 
@@ -273,6 +272,8 @@ def notify_daily(request: Request, db=Depends(get_db)):
             f"<li style='margin:6px 0;color:#313628;font-size:15px;'>{t}</li>"
             for t in titles
         )
+        unsub_token = _unsubscribe_token(row["user_id"], settings.notify_secret)
+        unsub_url = f"{settings.backend_url}/unsubscribe/{row['user_id']}/{unsub_token}"
 
         html = f"""
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
@@ -296,6 +297,9 @@ def notify_daily(request: Request, db=Depends(get_db)):
   <div style="text-align:center;">
     <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:36px;width:auto;opacity:0.7;" />
     <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
+    <p style="margin:4px 0 0;">
+      <a href="{unsub_url}" style="color:#d1d5db;font-size:11px;">Unsubscribe</a>
+    </p>
   </div>
 </div>
 """
@@ -310,8 +314,61 @@ def notify_daily(request: Request, db=Depends(get_db)):
     return {"notified": len(rows)}
 
 
+@app.get("/settings/notifications")
+def get_notification_settings(user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        "SELECT email_notifications_enabled, email_notification_hour FROM users WHERE id = %s",
+        (user["id"],),
+    )
+    return cur.fetchone()
+
+
+@app.patch("/settings/notifications")
+def update_notification_settings(payload: NotificationSettings, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor()
+    cur.execute(
+        "UPDATE users SET email_notifications_enabled = %s, email_notification_hour = %s WHERE id = %s",
+        (payload.enabled, payload.hour, user["id"]),
+    )
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/unsubscribe/{user_id}/{token}")
+def unsubscribe_email(user_id: str, token: str, db=Depends(get_db)):
+    settings = get_settings()
+    expected = _unsubscribe_token(user_id, settings.notify_secret)
+    if not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=403, detail="Invalid unsubscribe link")
+    cur = db.cursor()
+    cur.execute(
+        "UPDATE users SET email_notifications_enabled = FALSE WHERE id = %s",
+        (user_id,),
+    )
+    db.commit()
+    return HTMLResponse(f"""
+<html>
+<head><title>Unsubscribed — Lock The Code</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:80px auto;padding:0 24px;text-align:center;">
+  <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:40px;width:auto;opacity:0.7;margin-bottom:24px;" />
+  <h2 style="color:#313628;margin:0 0 8px;">You've been unsubscribed</h2>
+  <p style="color:#6b7280;margin:0 0 24px;">You won't receive daily review reminders anymore.</p>
+  <p style="color:#6b7280;font-size:14px;">
+    Changed your mind? Re-enable emails in your
+    <a href="{settings.frontend_url}/settings" style="color:#a20021;">settings</a>.
+  </p>
+</body>
+</html>
+""")
+
+
 def _calendar_token(user_id: str, secret: str) -> str:
     return hmac.new(secret.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def _unsubscribe_token(user_id: str, secret: str) -> str:
+    return hmac.new(secret.encode(), f"unsub:{user_id}".encode(), hashlib.sha256).hexdigest()[:32]
 
 
 @app.get("/calendar/token")

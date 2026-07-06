@@ -11,6 +11,7 @@ import {
   faRobot,
   faMicrophone,
   faLayerGroup,
+  faGear,
   type IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -171,6 +172,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           );
         })}
+
+        <div className="mt-auto pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+          <button
+            onClick={() => router.push("/settings")}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
+            style={{
+              backgroundColor: pathname === "/settings" ? "rgba(255,255,255,0.08)" : "transparent",
+              color: pathname === "/settings" ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.55)",
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faGear}
+              style={{ color: "rgba(255,255,255,0.55)", width: "1rem", height: "1rem" }}
+            />
+            Settings
+          </button>
+        </div>
       </nav>
 
       {/* Main content — extra bottom padding on mobile so content clears the fixed bottom nav */}
@@ -238,6 +256,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
             );
           })}
+          <button
+            onClick={() => router.push("/settings")}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer"
+            style={{ opacity: pathname === "/settings" ? 1 : 0.4 }}
+          >
+            <FontAwesomeIcon
+              icon={faGear}
+              style={{ color: "var(--foreground)", width: "1.125rem", height: "1.125rem" }}
+            />
+            <span className="text-[10px] font-medium" style={{ color: "var(--foreground)" }}>
+              Settings
+            </span>
+          </button>
         </nav>
       )}
       {paywallFeature && (

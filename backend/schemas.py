@@ -18,6 +18,10 @@ class ProblemUpdate(BaseModel):
     topic_ids: list[int] | None = None
     pattern_ids: list[int] | None = None
 
+class NotificationSettings(BaseModel):
+    enabled: bool
+    hour: int = Field(ge=0, le=23)
+
 class ReviewCreate(BaseModel):
     # confidence: required int, 1-5. Field(ge=..., le=...) gives a clean 422
     # instead of letting an out-of-range value hit the DB's chk_confidence
