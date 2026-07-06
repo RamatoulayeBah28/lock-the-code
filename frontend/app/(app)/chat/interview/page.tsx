@@ -447,31 +447,22 @@ export default function InterviewPage() {
     setCodeRunning(true);
     setShowConsole(true);
     setCodeOutput(null);
-    const langMap: Record<string, string> = {
-      python: "python", javascript: "javascript", typescript: "typescript",
-      java: "java", cpp: "c++", go: "go",
-    };
-    const fileMap: Record<string, string> = {
-      python: "main.py", javascript: "main.js", typescript: "main.ts",
-      java: "Main.java", cpp: "main.cpp", go: "main.go",
-    };
     try {
-      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          language: langMap[language] ?? language,
-          version: "*",
-          files: [{ name: fileMap[language] ?? "main.txt", content: code }],
-        }),
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ language, code }),
       });
-      if (!res.ok) throw new Error("Code runner unavailable");
       const data = await res.json();
-      setCodeOutput({
-        stdout: data.run?.stdout ?? "",
-        stderr: data.run?.stderr ?? data.compile?.stderr ?? "",
-        exitCode: data.run?.code ?? 0,
-      });
+      if (!res.ok) {
+        setCodeOutput({ stdout: "", stderr: data.detail ?? "Code runner unavailable", exitCode: 1 });
+        return;
+      }
+      setCodeOutput({ stdout: data.stdout, stderr: data.stderr, exitCode: data.exit_code });
     } catch (e) {
       setCodeOutput({ stdout: "", stderr: String(e), exitCode: 1 });
     } finally {

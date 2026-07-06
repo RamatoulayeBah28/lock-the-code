@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
     anthropic_api_key: str | None = None
+    judge0_api_key: str | None = None
     stripe_price_monthly: str = "price_1TpWY16zyw6RqhWJxmHWQWCs"
     stripe_price_annual: str = "price_1TpWY16zyw6RqhWJbW0plVaC"
     stripe_price_lifetime: str = "price_1TpWY26zyw6RqhWJ464D15Ag"

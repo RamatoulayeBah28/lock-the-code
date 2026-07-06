@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 import hashlib
@@ -425,6 +426,54 @@ def get_calendar_ics(user_id: str, token: str, db=Depends(get_db)):
     lines.append("END:VCALENDAR")
     ics = "\r\n".join(lines) + "\r\n"
     return Response(content=ics, media_type="text/calendar; charset=utf-8")
+
+
+# ── Code execution (Judge0 CE proxy) ──────────────────────────────────────────
+
+_JUDGE0_LANGUAGE_IDS = {
+    "python": 71,       # Python 3.8.1
+    "javascript": 63,   # JavaScript Node.js 12.14.0
+    "typescript": 74,   # TypeScript 3.7.4
+    "java": 62,         # Java OpenJDK 13.0.1
+    "cpp": 54,          # C++ GCC 9.2.0
+    "go": 60,           # Go 1.13.5
+}
+
+
+class ExecuteRequest(BaseModel):
+    language: str
+    code: str
+
+
+@app.post("/execute")
+async def execute_code(body: ExecuteRequest, user=Depends(get_current_user)):
+    import httpx
+    settings = get_settings()
+    if not settings.judge0_api_key:
+        raise HTTPException(status_code=503, detail="Code execution not configured — set JUDGE0_API_KEY")
+
+    language_id = _JUDGE0_LANGUAGE_IDS.get(body.language, 71)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.post(
+                "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true",
+                json={"source_code": body.code, "language_id": language_id},
+                headers={
+                    "Content-Type": "application/json",
+                    "X-RapidAPI-Key": settings.judge0_api_key,
+                    "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                },
+            )
+        if not res.is_success:
+            raise HTTPException(status_code=503, detail="Code execution service error")
+        data = res.json()
+        return {
+            "stdout": data.get("stdout") or "",
+            "stderr": (data.get("stderr") or "") + (data.get("compile_output") or ""),
+            "exit_code": data.get("exit_code") or 0,
+        }
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Code execution timed out")
 
 
 
