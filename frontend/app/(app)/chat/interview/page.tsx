@@ -9,6 +9,7 @@ import {
   faStopwatch,
   faStop,
 } from "@fortawesome/free-solid-svg-icons";
+import Editor from "@monaco-editor/react";
 
 const LEVELS = [
   { id: "Intern", label: "Intern" },
@@ -59,6 +60,7 @@ export default function InterviewPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [code, setCode] = useState("");
+  const [language, setLanguage] = useState("python");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -336,18 +338,7 @@ export default function InterviewPage() {
     );
   }
 
-  function handleCodeKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const el = e.currentTarget;
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
-      setCode(code.substring(0, start) + "    " + code.substring(end));
-      setTimeout(() => el.setSelectionRange(start + 4, start + 4), 0);
-    }
-  }
-
-  if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
+if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
 
   // ── Select problem source ────────────────────────────────────────────────
   if (phase.type === "selecting_problem") {
@@ -592,29 +583,41 @@ export default function InterviewPage() {
     </div>
   );
 
+  const LANGUAGES = ["python", "javascript", "typescript", "java", "cpp", "go"];
+
   const CodePanel = (
     <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "#1e1e1e" }}>
       <div
-        className="px-4 py-2 shrink-0 text-xs font-mono"
-        style={{ background: "#252526", color: "#858585", borderBottom: "1px solid #3c3c3c" }}
+        className="flex items-center gap-2 px-3 py-1.5 shrink-0"
+        style={{ background: "#252526", borderBottom: "1px solid #3c3c3c" }}
       >
-        solution.py
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="text-xs font-mono focus:outline-none cursor-pointer"
+          style={{ background: "#3c3c3c", color: "#cccccc", border: "none", borderRadius: "3px", padding: "2px 6px" }}
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l} value={l}>{l}</option>
+          ))}
+        </select>
       </div>
-      <textarea
+      <Editor
+        height="100%"
+        language={language}
+        theme="vs-dark"
         value={code}
-        onChange={(e) => setCode(e.target.value)}
-        onKeyDown={handleCodeKeyDown}
-        spellCheck={false}
-        placeholder="# Write your solution here..."
-        className="flex-1 resize-none p-4 focus:outline-none"
-        style={{
-          background: "#1e1e1e",
-          color: "#d4d4d4",
+        onChange={(val) => setCode(val ?? "")}
+        options={{
+          fontSize: 13,
           fontFamily: "Consolas, 'Courier New', monospace",
-          fontSize: "13px",
-          lineHeight: "1.6",
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          lineNumbers: "on",
+          wordWrap: "on",
           tabSize: 4,
-          caretColor: "#aeafad",
+          padding: { top: 12 },
+          overviewRulerLanes: 0,
         }}
       />
     </div>
