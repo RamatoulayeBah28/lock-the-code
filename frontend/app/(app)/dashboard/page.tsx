@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const ph = usePostHog();
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [calendarSyncing, setCalendarSyncing] = useState(false);
+  const [calendarIcsUrl, setCalendarIcsUrl] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
@@ -87,33 +87,32 @@ export default function DashboardPage() {
       if (res.ok) setAllPatterns(await res.json());
     }
 
-    fetchTopics().catch((err) => setError(String(err)));
-    fetchPatterns().catch((err) => setError(String(err)));
-  }, [isLoaded, isSignedIn, getToken]);
-
-  async function handleCalendarSync(type: "google" | "apple") {
-    setCalendarSyncing(true);
-    try {
+    async function fetchCalendarToken() {
       const token = await getToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/calendar/token`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/calendar/token`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return;
       const { token: calToken, user_id } = await res.json();
-      const icsUrl = `${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`;
-      if (type === "google") {
-        window.open(
-          `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(icsUrl)}`,
-          "_blank",
-        );
-      } else {
-        window.open(`webcal://${icsUrl.replace(/^https?:\/\//, "")}`, "_blank");
-      }
-    } finally {
-      setCalendarSyncing(false);
+      setCalendarIcsUrl(
+        `${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`,
+      );
+    }
+
+    fetchTopics().catch((err) => setError(String(err)));
+    fetchPatterns().catch((err) => setError(String(err)));
+    fetchCalendarToken().catch(() => {});
+  }, [isLoaded, isSignedIn, getToken]);
+
+  function handleCalendarSync(type: "google" | "apple") {
+    if (!calendarIcsUrl) return;
+    if (type === "google") {
+      window.open(
+        `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(calendarIcsUrl)}`,
+        "_blank",
+      );
+    } else {
+      window.open(`webcal://${calendarIcsUrl.replace(/^https?:\/\//, "")}`, "_blank");
     }
   }
 
@@ -263,7 +262,7 @@ export default function DashboardPage() {
           <div className="relative group">
             <button
               onClick={() => handleCalendarSync("google")}
-              disabled={calendarSyncing}
+              disabled={!calendarIcsUrl}
               className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
               aria-label="Sync to Google Calendar"
             >
@@ -282,7 +281,7 @@ export default function DashboardPage() {
           <div className="relative group">
             <button
               onClick={() => handleCalendarSync("apple")}
-              disabled={calendarSyncing}
+              disabled={!calendarIcsUrl}
               className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
               aria-label="Sync to Apple Calendar"
             >
