@@ -8,6 +8,7 @@ import {
   faPaperPlane,
   faStopwatch,
   faCode,
+  faStop,
 } from "@fortawesome/free-solid-svg-icons";
 
 const LEVELS = [
@@ -65,6 +66,27 @@ export default function InterviewPage() {
   const [timerStarted, setTimerStarted] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
+
+  // Voice input
+  const [isListening, setIsListening] = useState(false);
+  const [micSupported] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition), // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
+  const recognitionRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalTranscriptRef = useRef("");
+  const autoSubmitRef = useRef(false);
+
+  // Stable refs so speech callbacks can read current state without stale closures
+  const phaseRef = useRef<Phase>({ type: "selecting_problem" });
+  const messagesRef = useRef<Message[]>([]);
+  const streamingRef = useRef(false);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { streamingRef.current = streaming; }, [streaming]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const mobileBottomRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -99,6 +121,81 @@ export default function InterviewPage() {
       );
     }
   }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Voice helpers ──────────────────────────────────────────────────────────
+
+  function startListening() {
+    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!SR || streamingRef.current) return;
+
+    finalTranscriptRef.current = "";
+    autoSubmitRef.current = false;
+
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = "en-US";
+
+    rec.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      let newFinal = "";
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) newFinal += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      if (newFinal) finalTranscriptRef.current += newFinal + " ";
+      setInput(finalTranscriptRef.current + interim);
+
+      // Reset 10-second silence timer on each new speech result
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = setTimeout(handleSilenceTimeout, 10_000);
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (autoSubmitRef.current) {
+        const text = finalTranscriptRef.current.trim();
+        const p = phaseRef.current;
+        if (text && !streamingRef.current && p.type === "interviewing") {
+          streamMessage(messagesRef.current, p.level, p.company, p.timeLimit, text);
+        }
+      }
+    };
+
+    rec.onerror = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (e.error !== "aborted") {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        setIsListening(false);
+      }
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+    setIsListening(true);
+
+    // Start initial silence timer (in case user never speaks)
+    silenceTimerRef.current = setTimeout(handleSilenceTimeout, 10_000);
+  }
+
+  function handleSilenceTimeout() {
+    autoSubmitRef.current = true;
+    recognitionRef.current?.stop();
+  }
+
+  function handleStopAndSubmit() {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    autoSubmitRef.current = true;
+    recognitionRef.current?.stop();
+  }
+
+  function handleStopOnly() {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    autoSubmitRef.current = false;
+    recognitionRef.current?.stop();
+  }
+
+  // ── Interview logic ────────────────────────────────────────────────────────
 
   async function startInterview(
     level: string,
@@ -225,6 +322,7 @@ export default function InterviewPage() {
 
   function handleSend() {
     if (!input.trim() || streaming || phase.type !== "interviewing") return;
+    if (isListening) handleStopOnly();
     streamMessage(
       messages,
       phase.level,
@@ -380,6 +478,8 @@ export default function InterviewPage() {
         ? "text-yellow-600"
         : "text-success";
 
+  const inputDisabled = streaming || secondsLeft === 0;
+
   const ChatMessages = (
     <>
       {messages.map((m, i) => (
@@ -403,7 +503,7 @@ export default function InterviewPage() {
   );
 
   const ChatInput = (
-    <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0">
+    <div className="border-t border-foreground/10 px-3 py-3 flex gap-2 shrink-0 items-center">
       <input
         type="text"
         value={input}
@@ -414,20 +514,70 @@ export default function InterviewPage() {
             handleSend();
           }
         }}
-        placeholder="Reply to interviewer..."
-        disabled={streaming || secondsLeft === 0}
+        placeholder={isListening ? "Listening..." : "Reply to interviewer..."}
+        disabled={inputDisabled}
         className="flex-1 rounded-full border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
       />
-      <button
-        onClick={handleSend}
-        disabled={!input.trim() || streaming || secondsLeft === 0}
-        className="rounded-full bg-primary text-primary-foreground w-9 h-9 flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-      >
-        <FontAwesomeIcon
-          icon={faPaperPlane}
-          style={{ width: "0.875rem", height: "0.875rem" }}
-        />
-      </button>
+
+      {/* Mic button */}
+      {micSupported && (
+        <>
+          {isListening ? (
+            <>
+              {/* Pulsing mic — click to cancel without submitting */}
+              <button
+                onClick={handleStopOnly}
+                title="Cancel recording"
+                className="relative w-9 h-9 flex items-center justify-center rounded-full shrink-0 cursor-pointer"
+                style={{ background: "var(--primary)" }}
+              >
+                <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: "var(--primary)" }} />
+                <FontAwesomeIcon
+                  icon={faMicrophone}
+                  style={{ width: "0.875rem", height: "0.875rem", color: "white" }}
+                />
+              </button>
+              {/* Stop & Submit */}
+              <button
+                onClick={handleStopAndSubmit}
+                disabled={!finalTranscriptRef.current.trim() && !input.trim()}
+                title="Stop speaking and submit"
+                className="flex items-center gap-1.5 rounded-full px-3 h-9 text-xs font-medium shrink-0 cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-40"
+                style={{ background: "var(--primary)", color: "white" }}
+              >
+                <FontAwesomeIcon icon={faStop} style={{ width: "0.7rem", height: "0.7rem" }} />
+                Submit
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={startListening}
+              disabled={inputDisabled}
+              title="Speak your answer"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-foreground/20 shrink-0 cursor-pointer hover:border-foreground/50 transition-colors disabled:opacity-40"
+            >
+              <FontAwesomeIcon
+                icon={faMicrophone}
+                style={{ width: "0.875rem", height: "0.875rem", color: "var(--accent)" }}
+              />
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Send button — hidden while listening, use Submit instead */}
+      {!isListening && (
+        <button
+          onClick={handleSend}
+          disabled={!input.trim() || inputDisabled}
+          className="rounded-full bg-primary text-primary-foreground w-9 h-9 flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+        >
+          <FontAwesomeIcon
+            icon={faPaperPlane}
+            style={{ width: "0.875rem", height: "0.875rem" }}
+          />
+        </button>
+      )}
     </div>
   );
 
@@ -463,16 +613,13 @@ export default function InterviewPage() {
         </span>
         {phase.company !== "any company" && (
           <>
-            <span className="hidden sm:inline text-sm text-foreground/40">
-              ·
-            </span>
+            <span className="hidden sm:inline text-sm text-foreground/40">·</span>
             <span className="hidden sm:inline text-sm text-foreground/60 truncate">
               {phase.company}
             </span>
           </>
         )}
         <div className="ml-auto flex items-center gap-3">
-          {/* Desktop-only code toggle */}
           <button
             onClick={() => setShowCode((v) => !v)}
             className="hidden md:flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
@@ -519,7 +666,7 @@ export default function InterviewPage() {
         </button>
       </div>
 
-      {/* Mobile layout — single panel at a time */}
+      {/* Mobile layout */}
       <div className="md:hidden flex flex-col flex-1 overflow-hidden">
         {mobileTab === "chat" ? (
           <>
@@ -536,7 +683,7 @@ export default function InterviewPage() {
         )}
       </div>
 
-      {/* Desktop layout — side by side */}
+      {/* Desktop layout */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         <div
           className={`flex flex-col ${showCode ? "w-1/2" : "flex-1"} border-r border-foreground/10`}
