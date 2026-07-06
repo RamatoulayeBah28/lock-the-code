@@ -41,10 +41,16 @@ export default function ReviewPage() {
   async function fetchTodaysProblem() {
     try {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/today`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/problems/today`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) {
+        setError(`Request failed: ${res.status}`);
+        return;
+      }
       setProblem(await res.json());
       setExpanded(false);
     } catch (e) {
@@ -56,13 +62,27 @@ export default function ReviewPage() {
     if (!problem || submitting) return;
     setSubmitting(true);
     const token = await getToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${problem.id}/review`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ confidence }),
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/problems/${problem.id}/review`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confidence }),
+      },
+    );
+    if (!res.ok) {
+      setError(`Request failed: ${res.status}`);
+      setSubmitting(false);
+      return;
+    }
+    ph?.capture("review_submitted", {
+      confidence,
+      problem_title: problem.title,
+      difficulty: problem.difficulty,
     });
-    if (!res.ok) { setError(`Request failed: ${res.status}`); setSubmitting(false); return; }
-    ph?.capture("review_submitted", { confidence, problem_title: problem.title, difficulty: problem.difficulty });
     await fetchTodaysProblem();
     setSubmitting(false);
   }
@@ -81,7 +101,10 @@ export default function ReviewPage() {
           <div className="h-4 w-28 rounded bg-foreground/10 animate-pulse mb-3" />
           <div className="flex gap-2 flex-wrap">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-10 w-20 rounded-full bg-foreground/10 animate-pulse" />
+              <div
+                key={i}
+                className="h-10 w-20 rounded-full bg-foreground/10 animate-pulse"
+              />
             ))}
           </div>
         </div>
@@ -91,9 +114,19 @@ export default function ReviewPage() {
   if (problem === null) {
     return (
       <div className="p-8 max-w-2xl mx-auto w-full flex flex-col items-center gap-6 py-24 text-center">
-        <FontAwesomeIcon icon={faCalendarDays} style={{ width: "3rem", height: "3rem", color: "var(--success)", opacity: 0.4 }} />
+        <FontAwesomeIcon
+          icon={faCalendarDays}
+          style={{
+            width: "3rem",
+            height: "3rem",
+            color: "var(--success)",
+            opacity: 0.4,
+          }}
+        />
         <h1 className="text-2xl font-semibold">No Problems for Today</h1>
-        <p className="text-foreground/60">You&apos;re all caught up! Ready to practice something new?</p>
+        <p className="text-foreground/60">
+          You&apos;re all caught up! Ready to practice something new?
+        </p>
         <a
           href="/dashboard"
           className="rounded-full bg-primary text-primary-foreground font-medium text-base h-12 px-8 flex items-center transition-opacity hover:opacity-90"
@@ -119,11 +152,24 @@ export default function ReviewPage() {
         <h1 className="text-xl font-semibold text-center">{problem.title}</h1>
         {expanded && (
           <div className="mt-4 flex flex-col gap-3 border-t border-foreground/10 pt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-foreground/40">{problem.difficulty}</p>
-            <p className="text-sm text-foreground/60">{problem.topics.join(", ")} · {problem.patterns.join(", ")}</p>
-            {problem.note && <p className="text-sm italic text-foreground/50">{problem.note}</p>}
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground/40">
+              {problem.difficulty}
+            </p>
+            <p className="text-sm text-foreground/60">
+              {problem.topics.join(", ")} · {problem.patterns.join(", ")}
+            </p>
+            {problem.note && (
+              <p className="text-sm italic text-foreground/50">
+                {problem.note}
+              </p>
+            )}
             {problem.url && (
-              <a href={problem.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+              <a
+                href={problem.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline"
+              >
                 View problem ↗
               </a>
             )}

@@ -47,6 +47,52 @@ function formatTime(seconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// ── In-browser code execution helpers ─────────────────────────────────────────
+
+// Lazy singleton — loads Pyodide WASM once, reuses on subsequent runs
+let pyodidePromise: Promise<any> | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+function getPyodide() {
+  if (!pyodidePromise) {
+    pyodidePromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+      script.onload = async () => {
+        try {
+          resolve(await (window as any).loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" })); // eslint-disable-line @typescript-eslint/no-explicit-any
+        } catch (e) { reject(e); }
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  return pyodidePromise;
+}
+
+function runJavaScriptInWorker(code: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  return new Promise((resolve) => {
+    const src = `self.onmessage=function(e){
+      const logs=[];
+      const console={
+        log:(...a)=>logs.push(a.map(x=>(x!==null&&typeof x==='object')?JSON.stringify(x):String(x)).join(' ')),
+        error:(...a)=>logs.push('[err] '+a.map(String).join(' ')),
+        warn:(...a)=>logs.push('[warn] '+a.map(String).join(' ')),
+        info:(...a)=>logs.push(a.map(String).join(' ')),
+      };
+      let stderr='';
+      try{eval(e.data);self.postMessage({stdout:logs.join('\\n'),stderr,exitCode:0});}
+      catch(err){self.postMessage({stdout:logs.join('\\n'),stderr:err.message||String(err),exitCode:1});}
+    };`;
+    const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+    const worker = new Worker(url);
+    const timer = setTimeout(() => { worker.terminate(); URL.revokeObjectURL(url); resolve({ stdout: "", stderr: "Timed out after 10s", exitCode: 1 }); }, 10_000);
+    worker.onmessage = (e) => { clearTimeout(timer); worker.terminate(); URL.revokeObjectURL(url); resolve(e.data); };
+    worker.onerror  = (e) => { clearTimeout(timer); worker.terminate(); URL.revokeObjectURL(url); resolve({ stdout: "", stderr: e.message, exitCode: 1 }); };
+    worker.postMessage(code);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 const MicIcon = ({ size = "1.25rem" }: { size?: string }) => (
   <FontAwesomeIcon
     icon={faMicrophone}
@@ -448,21 +494,41 @@ export default function InterviewPage() {
     setShowConsole(true);
     setCodeOutput(null);
     try {
-      const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/execute`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ language, code }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setCodeOutput({ stdout: "", stderr: data.detail ?? "Code runner unavailable", exitCode: 1 });
-        return;
+      if (language === "python") {
+        // Free in-browser execution via Pyodide WebAssembly
+        let stdout = "";
+        let stderr = "";
+        const py = await getPyodide();
+        py.setStdout({ batched: (t: string) => { stdout += t + "\n"; } });
+        py.setStderr({ batched: (t: string) => { stderr += t + "\n"; } });
+        try {
+          await py.runPythonAsync(code);
+          setCodeOutput({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: 0 });
+        } catch (e: unknown) {
+          setCodeOutput({ stdout: stdout.trim(), stderr: e instanceof Error ? e.message : String(e), exitCode: 1 });
+        }
+      } else if (language === "javascript") {
+        // Free in-browser execution via sandboxed Web Worker
+        const result = await runJavaScriptInWorker(code);
+        setCodeOutput(result);
+      } else {
+        // Cloud execution via Judge0 — requires JUDGE0_API_KEY on the backend
+        const token = await getToken();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/execute`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ language, code }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setCodeOutput({ stdout: "", stderr: data.detail ?? `Cloud execution not configured for ${language}`, exitCode: 1 });
+          return;
+        }
+        setCodeOutput({ stdout: data.stdout, stderr: data.stderr, exitCode: data.exit_code });
       }
-      setCodeOutput({ stdout: data.stdout, stderr: data.stderr, exitCode: data.exit_code });
     } catch (e) {
       setCodeOutput({ stdout: "", stderr: String(e), exitCode: 1 });
     } finally {
