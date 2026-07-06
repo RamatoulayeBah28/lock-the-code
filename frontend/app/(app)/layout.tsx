@@ -86,16 +86,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fetchMe();
   }, [isLoaded, isSignedIn, getToken]);
 
+  function safeNavigate(href: string) {
+    if (pathname === "/chat/interview" && href !== "/chat/interview") {
+      const ok = window.confirm(
+        "Your interview is in progress.\n\nYou can return within 1 minute to continue. Leave anyway?",
+      );
+      if (!ok) return;
+    }
+    router.push(href);
+  }
+
   function handleProClick(href: string, label: string) {
     if (!proStatus?.is_pro) {
       setPaywallFeature(label);
       return;
     }
-    router.push(href);
+    safeNavigate(href);
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className={`flex overflow-hidden ${isChatPage ? "h-[calc(100dvh-4rem)]" : "flex-1"}`}>
       {/* Sidebar — md+ only */}
       <nav
         className="hidden md:flex w-60 shrink-0 flex-col gap-1 py-6 px-3 overflow-y-auto"
@@ -112,7 +122,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           return (
             <button
               key={href}
-              onClick={() => router.push(href)}
+              onClick={() => safeNavigate(href)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
               style={{
                 backgroundColor: active
@@ -176,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content — extra bottom padding on mobile so content clears the fixed bottom nav */}
       <main
-        className={`flex-1 overflow-y-auto md:pb-0 ${isChatPage ? "" : "pb-16"}`}
+        className={`flex-1 md:pb-0 ${isChatPage ? "overflow-hidden" : "overflow-y-auto pb-16"}`}
       >
         {children}
       </main>
@@ -192,7 +202,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return (
               <button
                 key={href}
-                onClick={() => router.push(href)}
+                onClick={() => safeNavigate(href)}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer"
                 style={{ opacity: active ? 1 : 0.4 }}
               >

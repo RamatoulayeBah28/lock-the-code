@@ -53,18 +53,53 @@ const MicIcon = ({ size = "1.25rem" }: { size?: string }) => (
   />
 );
 
+type RestoredSession = {
+  messages: Message[];
+  phase: Phase;
+  code: string;
+  language: string;
+  secondsLeft: number;
+  timerStarted: boolean;
+};
+
+function parseRestoredSession(): RestoredSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = sessionStorage.getItem("ltc_interview");
+    if (!saved) return null;
+    const data = JSON.parse(saved);
+    const elapsed = (Date.now() - data.leftAt) / 1000;
+    if (elapsed > 60) { sessionStorage.removeItem("ltc_interview"); return null; }
+    const secondsLeft = Math.max(0, data.secondsLeft - Math.floor(elapsed));
+    sessionStorage.removeItem("ltc_interview");
+    return {
+      messages: data.messages,
+      phase: data.phase,
+      code: data.code,
+      language: data.language,
+      secondsLeft,
+      timerStarted: secondsLeft > 0,
+    };
+  } catch {
+    sessionStorage.removeItem("ltc_interview");
+    return null;
+  }
+}
+
 export default function InterviewPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  const [phase, setPhase] = useState<Phase>({ type: "selecting_problem" });
+  // Lazy-restore from sessionStorage (populated on unmount when interview is active)
+  const [_restored] = useState(() => parseRestoredSession());
+  const [phase, setPhase] = useState<Phase>(() => _restored?.phase ?? { type: "selecting_problem" });
   const [company, setCompany] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => _restored?.messages ?? []);
   const [input, setInput] = useState("");
-  const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("python");
+  const [code, setCode] = useState(() => _restored?.code ?? "");
+  const [language, setLanguage] = useState(() => _restored?.language ?? "python");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [timerStarted, setTimerStarted] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(() => _restored?.secondsLeft ?? 0);
+  const [timerStarted, setTimerStarted] = useState(() => _restored?.timerStarted ?? false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
 
   // Voice input
@@ -83,18 +118,77 @@ export default function InterviewPage() {
   const phaseRef = useRef<Phase>({ type: "selecting_problem" });
   const messagesRef = useRef<Message[]>([]);
   const streamingRef = useRef(false);
+  const codeRef = useRef("");
+  const languageRef = useRef("python");
+  const secondsLeftRef = useRef(0);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { streamingRef.current = streaming; }, [streaming]);
+  useEffect(() => { codeRef.current = code; }, [code]);
+  useEffect(() => { languageRef.current = language; }, [language]);
+  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const mobileChatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset textarea height when input is cleared programmatically (e.g. after voice submit)
+  // Resize textarea whenever input changes (handles voice input expanding too)
   useEffect(() => {
-    if (!input && inputRef.current) inputRef.current.style.height = "auto";
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [input]);
+
+  // Save interview state on unmount so user can return within 1 minute
+  useEffect(() => {
+    return () => {
+      if (phaseRef.current.type === "interviewing") {
+        try {
+          sessionStorage.setItem("ltc_interview", JSON.stringify({
+            messages: messagesRef.current,
+            phase: phaseRef.current,
+            code: codeRef.current,
+            language: languageRef.current,
+            secondsLeft: secondsLeftRef.current,
+            leftAt: Date.now(),
+          }));
+        } catch {}
+      } else {
+        sessionStorage.removeItem("ltc_interview");
+      }
+    };
+  }, []);
+
+  // Warn on browser tab close/reload during an active interview
+  useEffect(() => {
+    if (phase.type !== "interviewing") return;
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [phase.type]);
+
+  // 5-minute inactivity → end the interview
+  function resetInactivity() {
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    inactivityRef.current = setTimeout(() => {
+      sessionStorage.removeItem("ltc_interview");
+      setPhase({ type: "done" });
+    }, 5 * 60 * 1000);
+  }
+
+  useEffect(() => {
+    if (phase.type !== "interviewing") {
+      if (inactivityRef.current) { clearTimeout(inactivityRef.current); inactivityRef.current = null; }
+      return;
+    }
+    resetInactivity();
+    return () => { if (inactivityRef.current) clearTimeout(inactivityRef.current); };
+  }, [phase.type]);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Scroll to bottom on every message update, including mid-stream tokens
@@ -104,7 +198,7 @@ export default function InterviewPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!timerStarted || secondsLeft <= 0) return;
+    if (!timerStarted || secondsLeftRef.current <= 0) return;
     timerRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -127,7 +221,7 @@ export default function InterviewPage() {
         "Time's up! Please start the feedback session now.",
       );
     }
-  }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally fires only on timer tick
 
   // ── Voice helpers ──────────────────────────────────────────────────────────
 
@@ -329,6 +423,7 @@ export default function InterviewPage() {
       setError(String(e));
     } finally {
       setStreaming(false);
+      resetInactivity();
     }
   }
 
@@ -465,6 +560,29 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ── Inactivity ended the interview ──────────────────────────────────────
+  if (phase.type === "done") {
+    return (
+      <div className="p-4 sm:p-8 max-w-xl mx-auto flex flex-col gap-6 items-center text-center">
+        <div className="w-16 h-16 rounded-full bg-foreground/5 flex items-center justify-center">
+          <MicIcon size="1.5rem" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold mb-2">Interview ended</h1>
+          <p className="text-foreground/60 text-sm">
+            The session ended after 5 minutes of inactivity.
+          </p>
+        </div>
+        <button
+          onClick={() => { setMessages([]); setCode(""); setPhase({ type: "selecting_problem" }); }}
+          className="rounded-full bg-primary text-primary-foreground text-sm font-medium px-6 py-2.5 cursor-pointer transition-opacity hover:opacity-90"
+        >
+          Start a new interview
+        </button>
       </div>
     );
   }
