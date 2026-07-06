@@ -31,7 +31,7 @@ export default function SettingsPage() {
 
   // Notifications
   const [notifEnabled, setNotifEnabled] = useState(true);
-  const [notifHour, setNotifHour] = useState(8);
+  const [notifHour, setNotifHour] = useState(17);
   const [notifLoaded, setNotifLoaded] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
