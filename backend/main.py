@@ -341,10 +341,8 @@ def get_calendar_ics(user_id: str, token: str, db=Depends(get_db)):
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//Lock The Code//EN",
-        "NAME:Lock The Code Reviews",
         "X-WR-CALNAME:Lock The Code Reviews",
-        "X-WR-CALDESC:Your spaced repetition review schedule from Lock The Code",
-        "REFRESH-INTERVAL;VALUE=DURATION:PT24H",
+        "X-WR-CALDESC:Your spaced repetition review schedule",
         "X-PUBLISHED-TTL:PT24H",
     ]
 
