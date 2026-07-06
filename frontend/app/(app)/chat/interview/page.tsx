@@ -257,10 +257,15 @@ export default function InterviewPage() {
     userText: string | null,
     contextOverride?: object,
   ) {
+    const codeBlock =
+      code.trim() && userText !== null
+        ? `\n\n[My code — ${language}]\n\`\`\`${language}\n${code.trim()}\n\`\`\``
+        : "";
+
     const apiMessages: Message[] =
       userText === null
         ? [{ role: "user", content: "Let's begin the interview!" }]
-        : [...history, { role: "user", content: userText }];
+        : [...history, { role: "user", content: userText + codeBlock }];
 
     if (userText !== null) {
       setMessages([...history, { role: "user", content: userText }]);
