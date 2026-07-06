@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+import hashlib
+import hmac
 import requests
 import resend
 from auth import get_current_user
@@ -305,6 +308,68 @@ def notify_daily(request: Request, db=Depends(get_db)):
         })
 
     return {"notified": len(rows)}
+
+
+def _calendar_token(user_id: str, secret: str) -> str:
+    return hmac.new(secret.encode(), user_id.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+@app.get("/calendar/token")
+def get_calendar_token(user=Depends(get_current_user)):
+    settings = get_settings()
+    token = _calendar_token(user["id"], settings.notify_secret)
+    return {"token": token, "user_id": user["id"]}
+
+
+@app.get("/calendar/{user_id}/{token}.ics")
+def get_calendar_ics(user_id: str, token: str, db=Depends(get_db)):
+    settings = get_settings()
+    expected = _calendar_token(user_id, settings.notify_secret)
+    if not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        "SELECT id, title, next_review_at FROM problems "
+        "WHERE user_id = %s AND next_review_at IS NOT NULL "
+        "ORDER BY next_review_at",
+        (user_id,),
+    )
+    problems = cur.fetchall()
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Lock The Code//EN",
+        "NAME:Lock The Code Reviews",
+        "X-WR-CALNAME:Lock The Code Reviews",
+        "X-WR-CALDESC:Your spaced repetition review schedule from Lock The Code",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT24H",
+        "X-PUBLISHED-TTL:PT24H",
+    ]
+
+    for p in problems:
+        dt = p["next_review_at"]
+        date_str = dt.strftime("%Y%m%d")
+        safe_title = (
+            str(p["title"])
+            .replace("\\", "\\\\")
+            .replace(",", "\\,")
+            .replace(";", "\\;")
+        )
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:ltc-{p['id']}@lockthecode.net",
+            f"DTSTART:{date_str}T170000",
+            f"DTEND:{date_str}T180000",
+            f"SUMMARY:Practice {safe_title}",
+            "URL:https://lockthecode.net/review",
+            "END:VEVENT",
+        ]
+
+    lines.append("END:VCALENDAR")
+    ics = "\r\n".join(lines) + "\r\n"
+    return Response(content=ics, media_type="text/calendar; charset=utf-8")
 
 
 

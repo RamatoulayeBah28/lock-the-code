@@ -2,14 +2,11 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState, Suspense } from "react";
+import Image from "next/image";
 import { usePostHog } from "posthog-js/react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPen,
-  faTrash,
-  faCalendarPlus,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 function UpgradeBanner() {
   const searchParams = useSearchParams();
@@ -36,7 +33,7 @@ export default function DashboardPage() {
   const ph = usePostHog();
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showCalendarBanner, setShowCalendarBanner] = useState(false);
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
@@ -93,6 +90,32 @@ export default function DashboardPage() {
     fetchTopics().catch((err) => setError(String(err)));
     fetchPatterns().catch((err) => setError(String(err)));
   }, [isLoaded, isSignedIn, getToken]);
+
+  async function handleCalendarSync(type: "google" | "apple") {
+    setCalendarSyncing(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/calendar/token`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) return;
+      const { token: calToken, user_id } = await res.json();
+      const icsUrl = `${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`;
+      if (type === "google") {
+        window.open(
+          `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(icsUrl)}`,
+          "_blank",
+        );
+      } else {
+        window.open(`webcal://${icsUrl.replace(/^https?:\/\//, "")}`, "_blank");
+      }
+    } finally {
+      setCalendarSyncing(false);
+    }
+  }
 
   function openAddForm() {
     setEditingProblem(null);
@@ -178,7 +201,11 @@ export default function DashboardPage() {
       }
       const created = await res.json();
       setProblems([...(problems ?? []), created]);
-      ph?.capture("problem_added", { difficulty, topics: selectedTopics.length, patterns: selectedPatterns.length });
+      ph?.capture("problem_added", {
+        difficulty,
+        topics: selectedTopics.length,
+        patterns: selectedPatterns.length,
+      });
     }
 
     closeForm();
@@ -215,10 +242,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-col gap-4">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-foreground/10 p-4"
-            >
+            <div key={i} className="rounded-xl border border-foreground/10 p-4">
               <div className="h-5 w-3/4 rounded bg-foreground/10 animate-pulse mb-2" />
               <div className="h-4 w-1/2 rounded bg-foreground/10 animate-pulse" />
             </div>
@@ -234,38 +258,47 @@ export default function DashboardPage() {
       </Suspense>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Your Problems</h1>
-        <button
-          onClick={() => setShowCalendarBanner((v) => !v)}
-          className="flex items-center gap-2 rounded-full border border-foreground/20 px-4 h-9 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
-        >
-          <FontAwesomeIcon
-            icon={faCalendarPlus}
-            style={{
-              width: "0.875rem",
-              height: "0.875rem",
-              color: "var(--success)",
-            }}
-          />
-          <span className="hidden sm:inline">Sync to Google Calendar</span>
-        </button>
-      </div>
-      {showCalendarBanner && (
-        <div className="mb-6 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium">Google Calendar Sync</p>
-            <p className="text-xs text-foreground/50 mt-0.5">
-              Automatically add your review schedule to Google Calendar coming
-              soon!
-            </p>
+        <div className="flex items-center gap-2">
+          {/* Google Calendar */}
+          <div className="relative group">
+            <button
+              onClick={() => handleCalendarSync("google")}
+              disabled={calendarSyncing}
+              className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
+              aria-label="Sync to Google Calendar"
+            >
+              <Image
+                src="/google-cal-icon.png"
+                alt="Google Calendar"
+                width={32}
+                height={32}
+              />
+            </button>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Sync to Google Calendar
+            </span>
           </div>
-          <button
-            onClick={() => setShowCalendarBanner(false)}
-            className="text-xs text-foreground/40 hover:text-foreground transition-colors cursor-pointer shrink-0"
-          >
-            Dismiss
-          </button>
+          {/* Apple Calendar */}
+          <div className="relative group">
+            <button
+              onClick={() => handleCalendarSync("apple")}
+              disabled={calendarSyncing}
+              className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
+              aria-label="Sync to Apple Calendar"
+            >
+              <Image
+                src="/apple-cal-icon.png"
+                alt="Apple Calendar"
+                width={32}
+                height={32}
+              />
+            </button>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Sync to Apple Calendar
+            </span>
+          </div>
         </div>
-      )}
+      </div>
 
       {problems.length === 0 ? (
         <p className="text-foreground/60">
