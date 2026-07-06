@@ -161,6 +161,16 @@ export default function InterviewPage() {
     };
   }, []);
 
+  // Signal to the layout nav guard that an interview is actively running
+  useEffect(() => {
+    if (phase.type === "interviewing") {
+      sessionStorage.setItem("ltc_interview_running", "1");
+    } else {
+      sessionStorage.removeItem("ltc_interview_running");
+    }
+    return () => sessionStorage.removeItem("ltc_interview_running");
+  }, [phase.type]);
+
   // Warn on browser tab close/reload during an active interview
   useEffect(() => {
     if (phase.type !== "interviewing") return;

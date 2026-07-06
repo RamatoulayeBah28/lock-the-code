@@ -66,8 +66,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const [proStatus, setProStatus] = useState<ProStatus>(null);
   const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
+  const [leaveConfirmHref, setLeaveConfirmHref] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!leaveConfirmHref) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setLeaveConfirmHref(null); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [leaveConfirmHref]);
 
   // Chat pages fill the viewport — hide the bottom nav so it doesn't overlay the input bar
   const isChatPage = pathname.startsWith("/chat/");
@@ -87,11 +95,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isLoaded, isSignedIn, getToken]);
 
   function safeNavigate(href: string) {
-    if (pathname === "/chat/interview" && href !== "/chat/interview") {
-      const ok = window.confirm(
-        "Your interview is in progress.\n\nYou can return within 1 minute to continue. Leave anyway?",
-      );
-      if (!ok) return;
+    if (
+      pathname === "/chat/interview" &&
+      href !== "/chat/interview" &&
+      sessionStorage.getItem("ltc_interview_running") === "1"
+    ) {
+      setLeaveConfirmHref(href);
+      return;
     }
     router.push(href);
   }
@@ -256,6 +266,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           featureLabel={paywallFeature}
           onClose={() => setPaywallFeature(null)}
         />
+      )}
+      {leaveConfirmHref && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={() => setLeaveConfirmHref(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-8 flex flex-col gap-5"
+            style={{ backgroundColor: "var(--surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-semibold">Interview in progress</h2>
+              <p className="text-sm text-foreground/60">
+                Your interview is still running. You can return within 1 minute
+                to continue where you left off.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setLeaveConfirmHref(null)}
+                className="flex-1 rounded-full border border-foreground/20 text-sm font-medium py-2.5 cursor-pointer hover:border-foreground/40 transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={() => { router.push(leaveConfirmHref); setLeaveConfirmHref(null); }}
+                className="flex-1 rounded-full bg-primary text-primary-foreground text-sm font-medium py-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                Leave anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
