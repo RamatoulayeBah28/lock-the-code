@@ -37,7 +37,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-surface text-foreground">
-        <ClerkProvider>
+        <ClerkProvider afterSignOutUrl="/">
+
           <PostHogProvider>
           <header className="flex justify-between items-center px-6 h-16 border-b border-foreground/10 shrink-0">
             <Link href="/" className="font-semibold text-lg tracking-tight">
