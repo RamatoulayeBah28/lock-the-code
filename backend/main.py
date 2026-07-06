@@ -330,7 +330,7 @@ def get_calendar_ics(user_id: str, token: str, db=Depends(get_db)):
 
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
-        "SELECT id, title, next_review_at FROM problems "
+        "SELECT id, title, url, next_review_at FROM problems "
         "WHERE user_id = %s AND next_review_at IS NOT NULL "
         "ORDER BY next_review_at",
         (user_id,),
@@ -361,7 +361,7 @@ def get_calendar_ics(user_id: str, token: str, db=Depends(get_db)):
             f"DTSTART:{date_str}T170000",
             f"DTEND:{date_str}T180000",
             f"SUMMARY:Practice {safe_title}",
-            "URL:https://lockthecode.net/review",
+            f"URL:{p['url'] or 'https://lockthecode.net/review'}",
             "END:VEVENT",
         ]
 
