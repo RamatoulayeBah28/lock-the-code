@@ -106,6 +106,7 @@ export default function DashboardPage() {
 
   function handleCalendarSync(type: "google" | "apple") {
     if (!calendarIcsUrl) return;
+    console.log("ICS URL:", calendarIcsUrl);
     if (type === "google") {
       window.open(
         `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(calendarIcsUrl)}`,
