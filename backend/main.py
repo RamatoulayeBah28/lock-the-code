@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+import requests
+import resend
 from auth import get_current_user
 from config import get_settings
 from db import get_db
@@ -8,6 +9,8 @@ from schemas import ProblemCreate, ProblemUpdate, ReviewCreate
 from stripe_routes import router as stripe_router
 from chat_routes import router as chat_router
 from psycopg2.extras import RealDictCursor
+
+
 
 
 app = FastAPI()
@@ -225,3 +228,82 @@ def review_problem(problem_id: int, payload: ReviewCreate, user=Depends(get_curr
     db.commit()
 
     return {"problem_id": problem_id, "new_interval_days": new_interval, "new_ef": new_ef}
+
+@app.post("/notify/daily")
+def notify_daily(request: Request, db=Depends(get_db)):
+    settings = get_settings()
+
+    if request.headers.get("NOTIFY_SECRET") != settings.notify_secret:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    resend.api_key = settings.resend_api_key
+
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        "SELECT user_id, array_agg(title ORDER BY next_review_at) AS titles "
+        "FROM problems "
+        "WHERE next_review_at::date <= CURRENT_DATE "
+        "GROUP BY user_id"
+    )
+    rows = cur.fetchall()
+
+    for row in rows:
+        clerk_res = requests.get(
+            f"https://api.clerk.com/v1/users/{row['user_id']}",
+            headers={"Authorization": f"Bearer {settings.clerk_secret_key}"},
+        )
+        if not clerk_res.ok:
+            continue
+        addresses = clerk_res.json().get("email_addresses", [])
+        if not addresses:
+            continue
+
+        email = addresses[0]["email_address"]
+        titles = row["titles"]
+        count = len(titles)
+        label = "problem" if count == 1 else "problems"
+        items_html = "".join(
+            f"<li style='margin:6px 0;color:#313628;font-size:15px;'>{t}</li>"
+            for t in titles
+        )
+
+        html = f"""
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="font-size:22px;font-weight:600;color:#313628;margin:0 0 8px;">
+    You have {count} {label} due today &#128274;
+  </h2>
+  <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">
+    Don't forget to practice daily &mdash; consistency is key.
+  </p>
+  <ul style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:16px 16px 16px 32px;margin:0 0 24px;list-style:disc;">
+    {items_html}
+  </ul>
+  <a href="https://lockthecode.net/review"
+     style="display:inline-block;background:#a20021;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 28px;border-radius:9999px;">
+    Start Reviewing &rarr;
+  </a>
+  <p style="color:#9ca3af;font-size:13px;margin:32px 0 24px;">
+    You got this! Consistency beats cramming every time.
+  </p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px;" />
+  <div style="text-align:center;">
+    <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:36px;width:auto;opacity:0.7;" />
+    <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
+  </div>
+</div>
+"""
+
+        resend.Emails.send({
+            "from": "Lock The Code <contact@lockthecode.net>",
+            "to": email,
+            "subject": f"You have {count} {label} due today",
+            "html": html,
+        })
+
+    return {"notified": len(rows)}
+
+
+
+
+
+
