@@ -87,8 +87,8 @@ export default function InterviewPage() {
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { streamingRef.current = streaming; }, [streaming]);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const mobileBottomRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const mobileChatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset textarea height when input is cleared programmatically (e.g. after voice submit)
@@ -97,9 +97,10 @@ export default function InterviewPage() {
   }, [input]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Scroll to bottom on every message update, including mid-stream tokens
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    mobileBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    if (mobileChatScrollRef.current) mobileChatScrollRef.current.scrollTop = mobileChatScrollRef.current.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -690,9 +691,8 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
       <div className="md:hidden flex flex-col flex-1 overflow-hidden">
         {mobileTab === "chat" ? (
           <>
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            <div ref={mobileChatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
               {ChatMessages}
-              <div ref={mobileBottomRef} />
             </div>
             {ChatInput}
           </>
@@ -706,9 +706,8 @@ if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
       {/* Desktop layout — always split */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         <div className="flex flex-col w-1/2 border-r border-foreground/10">
-          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
             {ChatMessages}
-            <div ref={bottomRef} />
           </div>
           {ChatInput}
         </div>
