@@ -113,7 +113,7 @@ export default function DashboardPage() {
         "_blank",
       );
     } else {
-      window.open(webcalUrl, "_blank");
+      window.location.href = webcalUrl;
     }
   }
 
