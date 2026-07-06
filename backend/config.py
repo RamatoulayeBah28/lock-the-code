@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 class Settings(BaseSettings):
     resend_api_key: str | None = None
-    notify_secret: str | None = None
+    notify_secret: str
     database_url: str
     clerk_secret_key: str
     clerk_jwt_key: str | None = None

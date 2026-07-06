@@ -277,7 +277,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
     You have {count} {label} due today &#128274;
   </h2>
   <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">
-    Don't forget to practice daily &mdash; consistency is key.
+    Don't forget to practice daily, consistency is key.
   </p>
   <ul style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:16px 16px 16px 32px;margin:0 0 24px;list-style:disc;">
     {items_html}
