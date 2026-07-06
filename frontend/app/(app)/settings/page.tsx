@@ -49,10 +49,11 @@ export default function SettingsPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/settings/notifications`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (!res.ok) return;
-      const data = await res.json();
-      setNotifEnabled(data.email_notifications_enabled);
-      setNotifHour(data.email_notification_hour);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifEnabled(data.email_notifications_enabled);
+        setNotifHour(data.email_notification_hour);
+      }
       setNotifLoaded(true);
     }
     loadNotifs().catch(() => {});
