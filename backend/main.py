@@ -232,6 +232,10 @@ def review_problem(problem_id: int, payload: ReviewCreate, user=Depends(get_curr
 @app.post("/notify/daily")
 def notify_daily(request: Request, db=Depends(get_db)):
     settings = get_settings()
+    print(type(settings))
+    print(settings.model_dump())
+    print(hasattr(settings, "notify_secret"))
+    print(dir(settings))
 
     if request.headers.get("NOTIFY_SECRET") != settings.notify_secret:
         raise HTTPException(status_code=403, detail="Forbidden")
