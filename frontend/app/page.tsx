@@ -4,13 +4,24 @@ import { useAuth, SignUpButton } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowsRotate,
+  faRobot,
+  faLightbulb,
+  faListCheck,
+  faLayerGroup,
+  faCalendarCheck,
+  faBell,
+  type IconDefinition,
+} from "@fortawesome/free-solid-svg-icons";
 const LOGOS = [
-  { src: "/leetcode.png",       alt: "LeetCode" },
-  { src: "/neetcode.png",       alt: "NeetCode" },
-  { src: "/codesignal.png",     alt: "CodeSignal" },
-  { src: "/hackerrank.png",     alt: "HackerRank" },
-  { src: "/hello.png",          alt: "HelloInterview" },
-  { src: "/pramp.png",          alt: "Pramp" },
+  { src: "/leetcode.png", alt: "LeetCode" },
+  { src: "/neetcode.png", alt: "NeetCode" },
+  { src: "/codesignal.png", alt: "CodeSignal" },
+  { src: "/hackerrank.png", alt: "HackerRank" },
+  { src: "/hello.png", alt: "HelloInterview" },
+  { src: "/pramp.png", alt: "Pramp" },
   { src: "/interviewingio.png", alt: "Interviewing.io", className: "h-20" },
 ];
 
@@ -264,8 +275,8 @@ export default function Home() {
             Everything you need to land the job
           </h2>
           <p className="text-lg text-foreground/60 max-w-xl mx-auto">
-            Lock The Code combines the tools that actually move the needle —
-            so you practice smarter, not longer.
+            Lock The Code combines the tools that actually move the needle so
+            you practice smarter, not longer.
           </p>
         </div>
 
@@ -273,14 +284,13 @@ export default function Home() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="rounded-2xl p-6 flex flex-col gap-3 border"
-              style={{ borderColor: "rgba(49,54,40,0.08)", background: "rgba(49,54,40,0.02)" }}
+              className="rounded-2xl p-6 flex flex-col gap-3 border border-foreground/[0.08] bg-foreground/[0.02]"
             >
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: f.iconBg }}
               >
-                {f.icon}
+                <FontAwesomeIcon icon={f.icon} style={{ width: "1rem", height: "1rem", color: f.iconColor }} />
               </div>
               <h3 className="font-semibold text-base text-foreground">{f.title}</h3>
               <p className="text-sm leading-6 text-foreground/60">{f.description}</p>
@@ -289,51 +299,99 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Email notification CTA */}
+      <section
+        className="w-full py-20 px-8 flex flex-col items-center text-center gap-6"
+        style={{ background: "var(--foreground)" }}
+      >
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center"
+          style={{ background: "rgba(252,185,125,0.15)" }}
+        >
+          <FontAwesomeIcon icon={faBell} style={{ width: "1.25rem", height: "1.25rem", color: "var(--accent)" }} />
+        </div>
+        <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white max-w-lg">
+          Never miss a review day
+        </h2>
+        <p className="text-white/60 text-lg max-w-md">
+          Lock The Code emails you when problems are due — so you stay consistent without having to remember anything yourself.
+        </p>
+        <SignUpButton forceRedirectUrl="/review">
+          <button className="rounded-full font-semibold text-base h-12 px-8 cursor-pointer transition-opacity hover:opacity-90"
+            style={{ background: "var(--accent)", color: "var(--foreground)" }}>
+            Get daily reminders — it&apos;s free
+          </button>
+        </SignUpButton>
+        <p className="text-white/30 text-sm">No spam. One email a day, only when you have problems due.</p>
+      </section>
+
     </div>
   );
 }
 
-const FEATURES = [
+type Feature = {
+  icon: IconDefinition;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  description: string;
+};
+
+const FEATURES: Feature[] = [
   {
-    icon: "🔁",
-    iconBg: "rgba(86,135,109,0.12)",
+    icon: faArrowsRotate,
+    iconBg: "rgba(86,135,109,0.15)",
+    iconColor: "var(--success)",
     title: "Spaced-Repetition Reviews",
     description:
       "Problems resurface right before you'd forget them, powered by the SM-2 algorithm. Build lasting memory instead of cramming the night before.",
   },
   {
-    icon: "🤖",
-    iconBg: "rgba(252,185,125,0.20)",
+    icon: faRobot,
+    iconBg: "rgba(162,0,33,0.10)",
+    iconColor: "var(--primary)",
     title: "AI Interview Simulator",
     description:
-      "Face a realistic mock interviewer that asks follow-ups, pushes on your reasoning, and grades your performance — all without needing to book a peer session.",
+      "Face a realistic mock interviewer that asks follow-ups, pushes on your reasoning, and grades your performance — no peer session needed.",
   },
   {
-    icon: "💡",
-    iconBg: "rgba(162,0,33,0.08)",
+    icon: faLightbulb,
+    iconBg: "rgba(252,185,125,0.20)",
+    iconColor: "var(--accent)",
     title: "AI Tutor",
     description:
       "Stuck on a problem? The tutor gives Socratic hints that guide your thinking without handing you the answer — the way real learning works.",
   },
   {
-    icon: "📋",
-    iconBg: "rgba(49,54,40,0.06)",
+    icon: faListCheck,
+    iconBg: "rgba(49,54,40,0.07)",
+    iconColor: "var(--foreground)",
     title: "Problem Tracker",
     description:
       "Log every problem you solve with difficulty, topics, patterns, and personal notes. Your entire prep history in one place, always searchable.",
   },
   {
-    icon: "🃏",
+    icon: faLayerGroup,
     iconBg: "rgba(252,185,125,0.20)",
+    iconColor: "var(--accent)",
     title: "Algorithm Flashcards",
     description:
-      "Lock in the patterns that show up again and again — sliding window, two pointers, dynamic programming — with spaced-repetition flashcards.",
+      "Lock in the patterns that keep showing up — sliding window, two pointers, dynamic programming — with spaced-repetition flashcards.",
   },
   {
-    icon: "📅",
-    iconBg: "rgba(86,135,109,0.12)",
+    icon: faCalendarCheck,
+    iconBg: "rgba(86,135,109,0.15)",
+    iconColor: "var(--success)",
     title: "Daily Review Queue",
     description:
       "Wake up to a personalised queue of exactly what's due today. No guessing, no overwhelm — just the right problems at the right time.",
+  },
+  {
+    icon: faBell,
+    iconBg: "rgba(162,0,33,0.10)",
+    iconColor: "var(--primary)",
+    title: "Email Reminders",
+    description:
+      "Get a daily email listing every problem due for review. Stay consistent without relying on willpower — let the reminder do the heavy lifting.",
   },
 ];
