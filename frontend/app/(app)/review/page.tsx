@@ -87,8 +87,8 @@ export default function ReviewPage() {
     setSubmitting(false);
   }
 
-  if (!isLoaded) return <p className="p-8">Loading...</p>;
-  if (!isSignedIn) return <p className="p-8">Sign in to start reviewing.</p>;
+  // if (!isLoaded) return <p className="p-8">Loading...</p>;
+  // if (!isSignedIn) return <p className="p-8">Sign in to start reviewing.</p>;
   if (error) return <p className="p-8 text-red-600">{error}</p>;
   if (problem === undefined)
     return (

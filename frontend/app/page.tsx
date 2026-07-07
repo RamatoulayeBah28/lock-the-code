@@ -212,7 +212,7 @@ export default function Home() {
             height={220}
             className="object-contain w-full max-w-[340px]"
           />
-          <h1 className="-mt-5 max-w-lg text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-foreground">
+          <h1 className="-mt-20 max-w-lg text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-foreground">
             The Only Free Technical Interview Study Plan You Need
           </h1>
           <p className="max-w-md text-lg leading-7 text-foreground/70">
@@ -241,7 +241,13 @@ export default function Home() {
       </main>
 
       {/* Logo marquee — full bleed */}
-      <div className="w-full pt-4 pb-20">
+      <div className="w-full pt-12 pb-10">
+        <p
+          className="text-center text-sm font-medium mb-4"
+          style={{ color: "rgba(49,54,40,0.40)" }}
+        >
+          Works alongside the resources you already use
+        </p>
         <div className="overflow-hidden w-full">
           <div
             className="animate-marquee flex gap-20 items-center"
@@ -259,12 +265,6 @@ export default function Home() {
               />
             ))}
           </div>
-          <p
-            className="text-center text-sm font-medium mb-8"
-            style={{ color: "rgba(49,54,40,0.40)" }}
-          >
-            Works alongside the resources you already use
-          </p>
         </div>
       </div>
 

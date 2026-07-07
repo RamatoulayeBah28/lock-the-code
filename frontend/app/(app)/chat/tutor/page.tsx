@@ -8,7 +8,12 @@ import { faRobot, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 type Step =
   | { type: "selecting_problem" }
   | { type: "selecting_help"; problem: string; problemUrl?: string }
-  | { type: "chatting"; problem: string; helpLevel: string; problemUrl?: string };
+  | {
+      type: "chatting";
+      problem: string;
+      helpLevel: string;
+      problemUrl?: string;
+    };
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -36,7 +41,10 @@ export default function TutorPage() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const [step, setStep] = useState<Step>({ type: "selecting_problem" });
   const [customProblem, setCustomProblem] = useState("");
-  const [todayProblem, setTodayProblem] = useState<{ title: string; url: string | null } | null>(null);
+  const [todayProblem, setTodayProblem] = useState<{
+    title: string;
+    url: string | null;
+  } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -47,9 +55,12 @@ export default function TutorPage() {
     if (!isLoaded || !isSignedIn) return;
     async function fetchToday() {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/today`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/problems/today`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (res.ok) {
         const p = await res.json();
         if (p) setTodayProblem({ title: p.title, url: p.url ?? null });
@@ -62,7 +73,11 @@ export default function TutorPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
-  async function startChat(problem: string, helpLevel: string, problemUrl?: string) {
+  async function startChat(
+    problem: string,
+    helpLevel: string,
+    problemUrl?: string,
+  ) {
     setStep({ type: "chatting", problem, helpLevel, problemUrl });
     await streamMessage([], problem, helpLevel, null, problemUrl);
   }
@@ -99,7 +114,11 @@ export default function TutorPage() {
         body: JSON.stringify({
           mode: "tutor",
           messages: apiMessages,
-          context: { problem, help_level: helpLevel, problem_url: problemUrl ?? "" },
+          context: {
+            problem,
+            help_level: helpLevel,
+            problem_url: problemUrl ?? "",
+          },
         }),
       });
 
@@ -127,7 +146,10 @@ export default function TutorPage() {
             const text = JSON.parse(data).text as string;
             setMessages((prev) => [
               ...prev.slice(0, -1),
-              { role: "assistant", content: (prev[prev.length - 1]?.content ?? "") + text },
+              {
+                role: "assistant",
+                content: (prev[prev.length - 1]?.content ?? "") + text,
+              },
             ]);
           } catch {}
         }
@@ -141,10 +163,16 @@ export default function TutorPage() {
 
   function handleSend() {
     if (!input.trim() || streaming || step.type !== "chatting") return;
-    streamMessage(messages, step.problem, step.helpLevel, input.trim(), step.problemUrl);
+    streamMessage(
+      messages,
+      step.problem,
+      step.helpLevel,
+      input.trim(),
+      step.problemUrl,
+    );
   }
 
-  if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
+  // if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
 
   // ── Setup: pick problem ─────────────────────────────────────────────────
   if (step.type === "selecting_problem") {
@@ -154,22 +182,34 @@ export default function TutorPage() {
           <BotIcon />
           <h1 className="text-2xl font-semibold">Ask Your AI Tutor</h1>
         </div>
-        <p className="text-foreground/60">Which problem do you want to tackle today?</p>
+        <p className="text-foreground/60">
+          Which problem do you want to tackle today?
+        </p>
         <div className="flex flex-col gap-3">
           {todayProblem && (
             <button
-              onClick={() => setStep({ type: "selecting_help", problem: todayProblem!.title, problemUrl: todayProblem!.url ?? undefined })}
+              onClick={() =>
+                setStep({
+                  type: "selecting_help",
+                  problem: todayProblem!.title,
+                  problemUrl: todayProblem!.url ?? undefined,
+                })
+              }
               className="rounded-xl border border-foreground/10 p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
             >
               <p className="font-medium">Today&apos;s review problem</p>
-              <p className="text-sm text-foreground/60 mt-0.5">{todayProblem!.title}</p>
+              <p className="text-sm text-foreground/60 mt-0.5">
+                {todayProblem!.title}
+              </p>
             </button>
           )}
           <button
             onClick={() => setStep({ type: "selecting_help", problem: "" })}
             className="rounded-xl border border-foreground/10 p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
           >
-            <p className="font-medium">A specific problem (I&apos;ll type it)</p>
+            <p className="font-medium">
+              A specific problem (I&apos;ll type it)
+            </p>
           </button>
         </div>
         {!todayProblem && (
@@ -181,13 +221,21 @@ export default function TutorPage() {
               onChange={(e) => setCustomProblem(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && customProblem.trim())
-                  setStep({ type: "selecting_help", problem: customProblem.trim() });
+                  setStep({
+                    type: "selecting_help",
+                    problem: customProblem.trim(),
+                  });
               }}
               className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <button
               disabled={!customProblem.trim()}
-              onClick={() => setStep({ type: "selecting_help", problem: customProblem.trim() })}
+              onClick={() =>
+                setStep({
+                  type: "selecting_help",
+                  problem: customProblem.trim(),
+                })
+              }
               className="rounded-full bg-primary text-primary-foreground text-sm font-medium h-10 px-6 cursor-pointer transition-opacity hover:opacity-90 self-end disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Continue
@@ -214,14 +262,19 @@ export default function TutorPage() {
             onChange={(e) => setCustomProblem(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && customProblem.trim())
-                setStep({ type: "selecting_help", problem: customProblem.trim() });
+                setStep({
+                  type: "selecting_help",
+                  problem: customProblem.trim(),
+                });
             }}
             autoFocus
             className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
           <button
             disabled={!customProblem.trim()}
-            onClick={() => setStep({ type: "selecting_help", problem: customProblem.trim() })}
+            onClick={() =>
+              setStep({ type: "selecting_help", problem: customProblem.trim() })
+            }
             className="rounded-full bg-primary text-primary-foreground text-sm font-medium h-10 px-6 cursor-pointer transition-opacity hover:opacity-90 self-end disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Continue
@@ -240,17 +293,26 @@ export default function TutorPage() {
           <h1 className="text-2xl font-semibold">How much help do you want?</h1>
         </div>
         <p className="text-sm text-foreground/60">
-          Problem: <span className="font-medium text-foreground">{step.problem}</span>
+          Problem:{" "}
+          <span className="font-medium text-foreground">{step.problem}</span>
         </p>
         <div className="flex flex-col gap-3">
           {HELP_OPTIONS.map((opt) => (
             <button
               key={opt.id}
-              onClick={() => startChat(step.problem, opt.label + " — " + opt.description, step.problemUrl)}
+              onClick={() =>
+                startChat(
+                  step.problem,
+                  opt.label + " — " + opt.description,
+                  step.problemUrl,
+                )
+              }
               className="rounded-xl border border-foreground/10 p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
             >
               <p className="font-medium">{opt.label}</p>
-              <p className="text-sm text-foreground/60 mt-0.5">{opt.description}</p>
+              <p className="text-sm text-foreground/60 mt-0.5">
+                {opt.description}
+              </p>
             </button>
           ))}
         </div>
@@ -268,12 +330,17 @@ export default function TutorPage() {
         />
         <span className="text-sm font-medium">AI Tutor</span>
         <span className="text-sm text-foreground/40 mx-2">·</span>
-        <span className="text-sm text-foreground/60 truncate">{step.problem}</span>
+        <span className="text-sm text-foreground/60 truncate">
+          {step.problem}
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+          >
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
                 m.role === "user"
@@ -309,7 +376,10 @@ export default function TutorPage() {
           disabled={!input.trim() || streaming}
           className="rounded-full bg-primary text-primary-foreground w-9 h-9 flex items-center justify-center cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
         >
-          <FontAwesomeIcon icon={faPaperPlane} style={{ width: "0.875rem", height: "0.875rem" }} />
+          <FontAwesomeIcon
+            icon={faPaperPlane}
+            style={{ width: "0.875rem", height: "0.875rem" }}
+          />
         </button>
       </div>
     </div>

@@ -89,9 +89,12 @@ export default function DashboardPage() {
 
     async function fetchCalendarToken() {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/calendar/token`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/calendar/token`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (!res.ok) return;
       const { token: calToken, user_id } = await res.json();
       setCalendarIcsUrl(
@@ -234,7 +237,7 @@ export default function DashboardPage() {
     setDeletingId(null);
   }
 
-  if (!isLoaded) return <p className="p-8">Loading...</p>;
+  // if (!isLoaded) return <p className="p-8">Loading...</p>;
   if (!isSignedIn) return <p className="p-8">Sign in to see your problems.</p>;
   if (error) return <p className="p-8 text-red-600">{error}</p>;
   if (problems === null)

@@ -560,7 +560,7 @@ export default function InterviewPage() {
     );
   }
 
-if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
+// if (!isLoaded || !isSignedIn) return <p className="p-8">Loading...</p>;
 
   // ── Select problem source ────────────────────────────────────────────────
   if (phase.type === "selecting_problem") {
