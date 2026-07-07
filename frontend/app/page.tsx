@@ -11,7 +11,7 @@ const LOGOS = [
   { src: "/hackerrank.png",     alt: "HackerRank" },
   { src: "/hello.png",          alt: "HelloInterview" },
   { src: "/pramp.png",          alt: "Pramp" },
-  { src: "/interviewingio.png", alt: "Interviewing.io", className: "h-12" },
+  { src: "/interviewingio.png", alt: "Interviewing.io", className: "h-20" },
 ];
 
 const NAV_ITEMS = [
