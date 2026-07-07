@@ -212,7 +212,7 @@ export default function Home() {
             height={220}
             className="object-contain w-full max-w-[340px]"
           />
-          <h1 className="max-w-lg text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-foreground">
+          <h1 className="-mt-5 max-w-lg text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-foreground">
             The Only Free Technical Interview Study Plan You Need
           </h1>
           <p className="max-w-md text-lg leading-7 text-foreground/70">
