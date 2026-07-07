@@ -202,7 +202,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center font-sans overflow-x-hidden">
       {/* Hero — two columns on large screens */}
-      <main className="flex flex-1 w-full max-w-7xl flex-col lg:flex-row items-center gap-10 lg:gap-16 px-8 pt-8 pb-16">
+      <main className="flex flex-1 w-full max-w-7xl flex-col lg:flex-row items-center gap-10 lg:gap-16 px-8 pt-8 pb-6">
         {/* Left: text + CTAs */}
         <div className="flex flex-col items-center lg:items-start gap-7 flex-1 text-center lg:text-left">
           <Image
@@ -241,13 +241,7 @@ export default function Home() {
       </main>
 
       {/* Logo marquee — full bleed */}
-      <div className="w-full pb-16">
-        <p
-          className="text-center text-sm font-medium mb-8"
-          style={{ color: "rgba(49,54,40,0.40)" }}
-        >
-          Works alongside the resources you already use
-        </p>
+      <div className="w-full pt-4 pb-20">
         <div className="overflow-hidden w-full">
           <div
             className="animate-marquee flex gap-20 items-center"
@@ -265,6 +259,12 @@ export default function Home() {
               />
             ))}
           </div>
+          <p
+            className="text-center text-sm font-medium mb-8"
+            style={{ color: "rgba(49,54,40,0.40)" }}
+          >
+            Works alongside the resources you already use
+          </p>
         </div>
       </div>
 
@@ -284,7 +284,7 @@ export default function Home() {
           {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              className={`rounded-2xl p-6 flex flex-col gap-3 border border-foreground/[0.08] bg-foreground/[0.02]${i === FEATURES.length - 1 ? " lg:col-start-2" : ""}`}
+              className={`rounded-2xl p-6 flex flex-col gap-3 border border-foreground/[0.08] bg-foreground/[0.02]${i === FEATURES.length - 1}`}
             >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -328,15 +328,15 @@ export default function Home() {
           Never miss a review day
         </h2>
         <p className="text-white/60 text-lg max-w-md">
-          Lock The Code emails you when problems are due, so you stay
-          consistent without having to remember anything yourself.
+          Lock The Code emails you when problems are due, so you stay consistent
+          without having to remember anything yourself.
         </p>
         <SignUpButton forceRedirectUrl="/review">
           <button
             className="rounded-full font-semibold text-base h-12 px-8 cursor-pointer transition-opacity hover:opacity-90"
             style={{ background: "var(--accent)", color: "var(--foreground)" }}
           >
-            Get daily reminders, it&apos;s free
+            Get daily reminders, it&apos;s free!
           </button>
         </SignUpButton>
         <p className="text-white/30 text-sm">
@@ -403,13 +403,5 @@ const FEATURES: Feature[] = [
     title: "Daily Review Queue",
     description:
       "Wake up to a personalised queue of exactly what's due today. No guessing, no overwhelm; just the right problems at the right time.",
-  },
-  {
-    icon: faBell,
-    iconBg: "rgba(162,0,33,0.10)",
-    iconColor: "var(--primary)",
-    title: "Email Reminders",
-    description:
-      "Get a daily email listing every problem due for review. Stay consistent without relying on willpower: let the reminder do the heavy lifting.",
   },
 ];
