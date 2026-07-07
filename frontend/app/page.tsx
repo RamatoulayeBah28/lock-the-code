@@ -256,6 +256,84 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Features section */}
+      <section className="w-full max-w-7xl px-8 py-20">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground mb-4">
+            Everything you need to land the job
+          </h2>
+          <p className="text-lg text-foreground/60 max-w-xl mx-auto">
+            Lock The Code combines the tools that actually move the needle —
+            so you practice smarter, not longer.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map((f) => (
+            <div
+              key={f.title}
+              className="rounded-2xl p-6 flex flex-col gap-3 border"
+              style={{ borderColor: "rgba(49,54,40,0.08)", background: "rgba(49,54,40,0.02)" }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                style={{ background: f.iconBg }}
+              >
+                {f.icon}
+              </div>
+              <h3 className="font-semibold text-base text-foreground">{f.title}</h3>
+              <p className="text-sm leading-6 text-foreground/60">{f.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
     </div>
   );
 }
+
+const FEATURES = [
+  {
+    icon: "🔁",
+    iconBg: "rgba(86,135,109,0.12)",
+    title: "Spaced-Repetition Reviews",
+    description:
+      "Problems resurface right before you'd forget them, powered by the SM-2 algorithm. Build lasting memory instead of cramming the night before.",
+  },
+  {
+    icon: "🤖",
+    iconBg: "rgba(252,185,125,0.20)",
+    title: "AI Interview Simulator",
+    description:
+      "Face a realistic mock interviewer that asks follow-ups, pushes on your reasoning, and grades your performance — all without needing to book a peer session.",
+  },
+  {
+    icon: "💡",
+    iconBg: "rgba(162,0,33,0.08)",
+    title: "AI Tutor",
+    description:
+      "Stuck on a problem? The tutor gives Socratic hints that guide your thinking without handing you the answer — the way real learning works.",
+  },
+  {
+    icon: "📋",
+    iconBg: "rgba(49,54,40,0.06)",
+    title: "Problem Tracker",
+    description:
+      "Log every problem you solve with difficulty, topics, patterns, and personal notes. Your entire prep history in one place, always searchable.",
+  },
+  {
+    icon: "🃏",
+    iconBg: "rgba(252,185,125,0.20)",
+    title: "Algorithm Flashcards",
+    description:
+      "Lock in the patterns that show up again and again — sliding window, two pointers, dynamic programming — with spaced-repetition flashcards.",
+  },
+  {
+    icon: "📅",
+    iconBg: "rgba(86,135,109,0.12)",
+    title: "Daily Review Queue",
+    description:
+      "Wake up to a personalised queue of exactly what's due today. No guessing, no overwhelm — just the right problems at the right time.",
+  },
+];
