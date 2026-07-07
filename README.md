@@ -74,5 +74,6 @@ npm run dev
 - [x] AI Tutor mode (Claude Opus 4.8, Socratic/UMPIRE, streaming)
 - [x] Mock Interviewer mode (timer, code editor, structured feedback)
 - [x] Deploy (Vercel + Railway)
+- [x] Google Calendar sync
+- [ ] Apple Calendar sync
 - [ ] Flashcards
-- [ ] Google Calendar sync
