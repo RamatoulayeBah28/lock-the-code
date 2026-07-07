@@ -281,19 +281,26 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map((f) => (
+          {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              className="rounded-2xl p-6 flex flex-col gap-3 border border-foreground/[0.08] bg-foreground/[0.02]"
+              className={`rounded-2xl p-6 flex flex-col gap-3 border border-foreground/[0.08] bg-foreground/[0.02]${i === FEATURES.length - 1 ? " lg:col-start-2" : ""}`}
             >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: f.iconBg }}
               >
-                <FontAwesomeIcon icon={f.icon} style={{ width: "1rem", height: "1rem", color: f.iconColor }} />
+                <FontAwesomeIcon
+                  icon={f.icon}
+                  style={{ width: "1rem", height: "1rem", color: f.iconColor }}
+                />
               </div>
-              <h3 className="font-semibold text-base text-foreground">{f.title}</h3>
-              <p className="text-sm leading-6 text-foreground/60">{f.description}</p>
+              <h3 className="font-semibold text-base text-foreground">
+                {f.title}
+              </h3>
+              <p className="text-sm leading-6 text-foreground/60">
+                {f.description}
+              </p>
             </div>
           ))}
         </div>
@@ -308,23 +315,34 @@ export default function Home() {
           className="w-12 h-12 rounded-2xl flex items-center justify-center"
           style={{ background: "rgba(252,185,125,0.15)" }}
         >
-          <FontAwesomeIcon icon={faBell} style={{ width: "1.25rem", height: "1.25rem", color: "var(--accent)" }} />
+          <FontAwesomeIcon
+            icon={faBell}
+            style={{
+              width: "1.25rem",
+              height: "1.25rem",
+              color: "var(--accent)",
+            }}
+          />
         </div>
         <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white max-w-lg">
           Never miss a review day
         </h2>
         <p className="text-white/60 text-lg max-w-md">
-          Lock The Code emails you when problems are due — so you stay consistent without having to remember anything yourself.
+          Lock The Code emails you when problems are due, so you stay
+          consistent without having to remember anything yourself.
         </p>
         <SignUpButton forceRedirectUrl="/review">
-          <button className="rounded-full font-semibold text-base h-12 px-8 cursor-pointer transition-opacity hover:opacity-90"
-            style={{ background: "var(--accent)", color: "var(--foreground)" }}>
-            Get daily reminders — it&apos;s free
+          <button
+            className="rounded-full font-semibold text-base h-12 px-8 cursor-pointer transition-opacity hover:opacity-90"
+            style={{ background: "var(--accent)", color: "var(--foreground)" }}
+          >
+            Get daily reminders, it&apos;s free
           </button>
         </SignUpButton>
-        <p className="text-white/30 text-sm">No spam. One email a day, only when you have problems due.</p>
+        <p className="text-white/30 text-sm">
+          No spam. One email a day, only when you have problems due.
+        </p>
       </section>
-
     </div>
   );
 }
@@ -352,7 +370,7 @@ const FEATURES: Feature[] = [
     iconColor: "var(--primary)",
     title: "AI Interview Simulator",
     description:
-      "Face a realistic mock interviewer that asks follow-ups, pushes on your reasoning, and grades your performance — no peer session needed.",
+      "Face a realistic mock interviewer that asks follow-ups, pushes on your reasoning, and grades your performance. No peer session needed.",
   },
   {
     icon: faLightbulb,
@@ -360,7 +378,7 @@ const FEATURES: Feature[] = [
     iconColor: "var(--accent)",
     title: "AI Tutor",
     description:
-      "Stuck on a problem? The tutor gives Socratic hints that guide your thinking without handing you the answer — the way real learning works.",
+      "Stuck on a problem? The tutor gives Socratic hints that guide your thinking without handing you the answer, the way real learning works.",
   },
   {
     icon: faListCheck,
@@ -376,7 +394,7 @@ const FEATURES: Feature[] = [
     iconColor: "var(--accent)",
     title: "Algorithm Flashcards",
     description:
-      "Lock in the patterns that keep showing up — sliding window, two pointers, dynamic programming — with spaced-repetition flashcards.",
+      "Lock in the patterns that keep showing up: sliding window, two pointers, dynamic programming and more, with spaced-repetition flashcards.",
   },
   {
     icon: faCalendarCheck,
@@ -384,7 +402,7 @@ const FEATURES: Feature[] = [
     iconColor: "var(--success)",
     title: "Daily Review Queue",
     description:
-      "Wake up to a personalised queue of exactly what's due today. No guessing, no overwhelm — just the right problems at the right time.",
+      "Wake up to a personalised queue of exactly what's due today. No guessing, no overwhelm; just the right problems at the right time.",
   },
   {
     icon: faBell,
@@ -392,6 +410,6 @@ const FEATURES: Feature[] = [
     iconColor: "var(--primary)",
     title: "Email Reminders",
     description:
-      "Get a daily email listing every problem due for review. Stay consistent without relying on willpower — let the reminder do the heavy lifting.",
+      "Get a daily email listing every problem due for review. Stay consistent without relying on willpower: let the reminder do the heavy lifting.",
   },
 ];
