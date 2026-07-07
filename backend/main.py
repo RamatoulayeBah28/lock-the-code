@@ -463,7 +463,7 @@ def submit_contact(body: ContactMessage, user=Depends(get_current_user)):
 
     # Look up sender email from Clerk so we can reply directly
     clerk_res = requests.get(
-        f"https://api.clerk.com/v1/users/{user.id}",
+        f"https://api.clerk.com/v1/users/{user['id']}",
         headers={"Authorization": f"Bearer {settings.clerk_secret_key}"},
     )
     sender_email = ""
@@ -481,7 +481,7 @@ def submit_contact(body: ContactMessage, user=Depends(get_current_user)):
         "html": f"""
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
   <h2 style="font-size:20px;font-weight:600;color:#313628;margin:0 0 16px;">New contact message</h2>
-  <p style="margin:0 0 4px;font-size:13px;color:#6b7280;"><strong>From:</strong> {sender_email or user.id}</p>
+  <p style="margin:0 0 4px;font-size:13px;color:#6b7280;"><strong>From:</strong> {sender_email or user['id']}</p>
   <p style="margin:0 0 4px;font-size:13px;color:#6b7280;"><strong>Subject:</strong> {subject}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
   <p style="font-size:15px;color:#313628;white-space:pre-wrap;margin:0;">{message}</p>
