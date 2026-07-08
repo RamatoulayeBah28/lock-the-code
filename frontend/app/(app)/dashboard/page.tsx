@@ -13,7 +13,7 @@ function UpgradeBanner() {
   if (searchParams.get("upgrade") !== "success") return null;
   return (
     <div className="mb-6 rounded-xl bg-success/20 border border-success/30 px-4 py-3 text-sm font-medium text-foreground">
-      ❤︎ You&apos;re now Pro! Welcome to Lock The Code Pro. ❤︎
+      Welcome to Lock The Code Pro ❤︎
     </div>
   );
 }
