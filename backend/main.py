@@ -307,7 +307,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
 
         resend.Emails.send({
             "from": "Lock The Code <contact@lockthecode.net>",
-            "to": email,
+            "to": [email],
             "subject": f"You have {count} {label} due today",
             "html": html,
         })
@@ -475,7 +475,7 @@ def submit_contact(body: ContactMessage, user=Depends(get_current_user)):
     resend.api_key = settings.resend_api_key
     resend.Emails.send({
         "from": "Lock The Code <contact@lockthecode.net>",
-        "to": "contact@lockthecode.net",
+        "to": ["contact@lockthecode.net"],
         "reply_to": sender_email or "noreply@lockthecode.net",
         "subject": f"[Contact] {subject}",
         "html": f"""

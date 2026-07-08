@@ -41,13 +41,18 @@ def get_current_user(
     clerk_user_id = state.payload["sub"]
 
     clerk_email = state.payload.get("email")
+    first_name = state.payload.get("first_name")
+    last_name = state.payload.get("last_name")
 
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
-        "INSERT INTO users (id, clerk_email) VALUES (%s, %s) "
-        "ON CONFLICT (id) DO UPDATE SET clerk_email = EXCLUDED.clerk_email",
-        (clerk_user_id, clerk_email),
+        "INSERT INTO users (id, clerk_email, first_name, last_name) VALUES (%s, %s, %s, %s) "
+        "ON CONFLICT (id) DO UPDATE SET "
+        "clerk_email = EXCLUDED.clerk_email, "
+        "first_name = COALESCE(EXCLUDED.first_name, users.first_name), "
+        "last_name  = COALESCE(EXCLUDED.last_name,  users.last_name)",
+        (clerk_user_id, clerk_email, first_name, last_name),
     )
     db.commit()
-    cur.execute("SELECT id, clerk_email FROM users WHERE id = %s", (clerk_user_id,))
+    cur.execute("SELECT id, clerk_email, first_name, last_name FROM users WHERE id = %s", (clerk_user_id,))
     return cur.fetchone()

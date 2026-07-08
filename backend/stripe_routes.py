@@ -55,7 +55,7 @@ def _send_welcome_email(email: str, settings):
     resend.api_key = settings.resend_api_key
     resend.Emails.send({
         "from": "Lock The Code <contact@lockthecode.net>",
-        "to": email,
+        "to": [email],
         "subject": "Welcome to Lock The Code Pro!",
         "html": """
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
@@ -103,7 +103,7 @@ def _send_cancellation_email(email: str, settings):
     resend.api_key = settings.resend_api_key
     resend.Emails.send({
         "from": "Lock The Code <contact@lockthecode.net>",
-        "to": email,
+        "to": [email],
         "subject": "Your Lock The Code Pro subscription has been cancelled",
         "html": """
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
@@ -247,9 +247,8 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
         customer_id = session.customer
         db_status = "trialing" if plan == "trial" else "active"
 
-        stripe_email = (session.customer_details or {}).get("email") if hasattr(session, "customer_details") else None
-        if not stripe_email and isinstance(session.get("customer_details"), dict):
-            stripe_email = session["customer_details"].get("email")
+        customer_details = session.get("customer_details") or {}
+        stripe_email = customer_details.get("email")
 
         if clerk_user_id:
             if plan == "trial":
@@ -266,11 +265,13 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
                 )
             db.commit()
 
+            # For the welcome email prefer stripe_email (the billing address the user just
+            # entered) and fall back to clerk_email if stripe didn't capture one.
             if settings.resend_api_key:
                 try:
-                    email = _get_user_email(clerk_user_id, settings, cur=cur)
-                    if email:
-                        _send_welcome_email(email, settings)
+                    welcome_email = stripe_email or _get_user_email(clerk_user_id, settings, cur=cur)
+                    if welcome_email:
+                        _send_welcome_email(welcome_email, settings)
                 except Exception:
                     pass
 
@@ -290,7 +291,7 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
         obj = event["data"]["object"]
         customer_id = obj.customer
         cur.execute(
-            "SELECT id FROM users WHERE stripe_customer_id = %s",
+            "SELECT id, clerk_email, stripe_email FROM users WHERE stripe_customer_id = %s",
             (customer_id,),
         )
         user_row = cur.fetchone()
@@ -303,9 +304,12 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
 
         if user_row and settings.resend_api_key and event["type"] == "customer.subscription.deleted":
             try:
-                email = _get_user_email(user_row["id"], settings, cur=cur)
-                if email:
-                    _send_cancellation_email(email, settings)
+                # Use clerk_email (login email) for account notifications — it may
+                # differ from stripe_email (billing email) so we prefer the one the
+                # user actually checks for their account.
+                cancel_email = user_row.get("clerk_email") or user_row.get("stripe_email")
+                if cancel_email:
+                    _send_cancellation_email(cancel_email, settings)
             except Exception:
                 pass
 
