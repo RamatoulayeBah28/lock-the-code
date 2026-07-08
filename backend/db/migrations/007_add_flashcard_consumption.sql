@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN flashcard_free_use_consumed BOOLEAN NOT NULL DEFAULT FALSE;
