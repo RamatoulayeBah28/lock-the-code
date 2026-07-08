@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import PostHogProvider from "@/app/components/PostHogProvider";
 import UserButtonWithSettings from "@/app/components/UserButtonWithSettings";
+import HeaderProButton from "@/app/components/HeaderProButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,12 +55,7 @@ export default function RootLayout({
                 </SignUpButton>
               </Show>
               <Show when="signed-in">
-                <Link
-                  href="/pricing"
-                  className="border rounded-full bg-accent text-foreground font-semibold text-sm h-9 px-4 flex items-center gap-1.5 transition-opacity hover:opacity-80"
-                >
-                  <span className="text-xs"></span> Pro
-                </Link>
+                <HeaderProButton />
                 <UserButtonWithSettings />
               </Show>
             </div>

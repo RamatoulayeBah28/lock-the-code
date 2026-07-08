@@ -237,8 +237,6 @@ export default function DashboardPage() {
     setDeletingId(null);
   }
 
-  // if (!isLoaded) return <p className="p-8">Loading...</p>;
-  if (!isSignedIn) return <p className="p-8">Sign in to see your problems.</p>;
   if (error) return <p className="p-8 text-red-600">{error}</p>;
   if (problems === null)
     return (
