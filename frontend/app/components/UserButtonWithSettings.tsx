@@ -3,6 +3,7 @@
 import { UserButton } from "@clerk/nextjs";
 import NotificationsSettings from "./NotificationsSettings";
 import ContactSettings from "./ContactSettings";
+import BillingSettings from "./BillingSettings";
 
 const BellIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -16,6 +17,12 @@ const EnvelopeIcon = () => (
   </svg>
 );
 
+const CreditCardIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+  </svg>
+);
+
 export default function UserButtonWithSettings() {
   return (
     <UserButton>
@@ -25,6 +32,13 @@ export default function UserButtonWithSettings() {
         labelIcon={<BellIcon />}
       >
         <NotificationsSettings />
+      </UserButton.UserProfilePage>
+      <UserButton.UserProfilePage
+        label="Billing"
+        url="billing"
+        labelIcon={<CreditCardIcon />}
+      >
+        <BillingSettings />
       </UserButton.UserProfilePage>
       <UserButton.UserProfilePage
         label="Contact Us"

@@ -74,6 +74,30 @@ def create_checkout_session(
 
 
 # ---------------------------------------------------------------------------
+# POST /billing/portal  — create a Stripe Customer Portal session
+# ---------------------------------------------------------------------------
+
+@router.post("/billing/portal")
+def create_billing_portal(user=Depends(get_current_user), db=Depends(get_db)):
+    settings = get_settings()
+    get_stripe()
+
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT stripe_customer_id FROM users WHERE id = %s", (user["id"],))
+    row = cur.fetchone()
+    customer_id = row["stripe_customer_id"] if row else None
+
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="No billing account found. Upgrade to Pro first.")
+
+    portal = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=f"{settings.frontend_url}/dashboard",
+    )
+    return {"url": portal.url}
+
+
+# ---------------------------------------------------------------------------
 # POST /webhook  — handle Stripe events
 # ---------------------------------------------------------------------------
 
