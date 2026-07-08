@@ -40,8 +40,14 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Unauthorized")
     clerk_user_id = state.payload["sub"]
 
+    clerk_email = state.payload.get("email")
+
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("INSERT INTO users (id) VALUES (%s) ON CONFLICT (id) DO NOTHING", (clerk_user_id,))
+    cur.execute(
+        "INSERT INTO users (id, clerk_email) VALUES (%s, %s) "
+        "ON CONFLICT (id) DO UPDATE SET clerk_email = EXCLUDED.clerk_email",
+        (clerk_user_id, clerk_email),
+    )
     db.commit()
-    cur.execute("SELECT id FROM users WHERE id = %s", (clerk_user_id,))
+    cur.execute("SELECT id, clerk_email FROM users WHERE id = %s", (clerk_user_id,))
     return cur.fetchone()

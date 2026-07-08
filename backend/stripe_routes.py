@@ -19,7 +19,23 @@ def get_stripe():
     return stripe
 
 
-def _get_user_email(clerk_user_id: str, settings) -> str | None:
+def _get_user_email(clerk_user_id: str, settings, cur=None) -> str | None:
+    """Return the user's email. Checks DB first (clerk_email/stripe_email),
+    falls back to Clerk API only when both columns are empty."""
+    if cur is not None:
+        try:
+            cur.execute(
+                "SELECT clerk_email, stripe_email FROM users WHERE id = %s",
+                (clerk_user_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                email = row.get("clerk_email") or row.get("stripe_email")
+                if email:
+                    return email
+        except Exception:
+            pass
+
     try:
         res = requests.get(
             f"https://api.clerk.com/v1/users/{clerk_user_id}",
@@ -64,7 +80,7 @@ def _send_welcome_email(email: str, settings):
     </div>
   </div>
 
-  <a href="https://lockthecode.net/review"
+  <a href="https://lockthecode.net"
      style="display:inline-block;background:#a20021;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 28px;border-radius:9999px;margin-bottom:24px;">
     Start Practicing &rarr;
   </a>
@@ -75,7 +91,7 @@ def _send_welcome_email(email: str, settings):
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 20px;" />
   <div style="text-align:center;">
-    <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
+    <img src="https://lockthecode.net/lock-the-code-logo.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
     <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
   </div>
 </div>
@@ -110,7 +126,7 @@ def _send_cancellation_email(email: str, settings):
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 20px;" />
   <div style="text-align:center;">
-    <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
+    <img src="https://lockthecode.net/lock-the-code-logo.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
     <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
   </div>
 </div>
@@ -231,24 +247,28 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
         customer_id = session.customer
         db_status = "trialing" if plan == "trial" else "active"
 
+        stripe_email = (session.customer_details or {}).get("email") if hasattr(session, "customer_details") else None
+        if not stripe_email and isinstance(session.get("customer_details"), dict):
+            stripe_email = session["customer_details"].get("email")
+
         if clerk_user_id:
             if plan == "trial":
                 cur.execute(
-                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, "
+                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, stripe_email = %s, "
                     "subscription_status = %s, trial_used = true WHERE id = %s",
-                    (customer_id, db_status, clerk_user_id),
+                    (customer_id, stripe_email, db_status, clerk_user_id),
                 )
             else:
                 cur.execute(
-                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, "
+                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, stripe_email = %s, "
                     "subscription_status = %s WHERE id = %s",
-                    (customer_id, db_status, clerk_user_id),
+                    (customer_id, stripe_email, db_status, clerk_user_id),
                 )
             db.commit()
 
             if settings.resend_api_key:
                 try:
-                    email = _get_user_email(clerk_user_id, settings)
+                    email = _get_user_email(clerk_user_id, settings, cur=cur)
                     if email:
                         _send_welcome_email(email, settings)
                 except Exception:
@@ -283,7 +303,7 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
 
         if user_row and settings.resend_api_key and event["type"] == "customer.subscription.deleted":
             try:
-                email = _get_user_email(user_row["id"], settings)
+                email = _get_user_email(user_row["id"], settings, cur=cur)
                 if email:
                     _send_cancellation_email(email, settings)
             except Exception:
