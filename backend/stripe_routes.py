@@ -1,4 +1,6 @@
 import stripe
+import requests
+import resend
 from fastapi import APIRouter, Depends, HTTPException, Request
 from psycopg2.extras import RealDictCursor
 
@@ -15,6 +17,114 @@ def get_stripe():
         raise HTTPException(status_code=503, detail="Stripe not configured in this environment")
     stripe.api_key = key
     return stripe
+
+
+def _get_user_email(clerk_user_id: str, settings) -> str | None:
+    try:
+        res = requests.get(
+            f"https://api.clerk.com/v1/users/{clerk_user_id}",
+            headers={"Authorization": f"Bearer {settings.clerk_secret_key}"},
+            timeout=5,
+        )
+        if res.ok:
+            addresses = res.json().get("email_addresses", [])
+            if addresses:
+                return addresses[0]["email_address"]
+    except Exception:
+        pass
+    return None
+
+
+def _send_welcome_email(email: str, settings):
+    resend.api_key = settings.resend_api_key
+    resend.Emails.send({
+        "from": "Lock The Code <contact@lockthecode.net>",
+        "to": email,
+        "subject": "Welcome to Lock The Code Pro!",
+        "html": """
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:40px;width:auto;margin-bottom:24px;" />
+  <h1 style="font-size:24px;font-weight:700;color:#313628;margin:0 0 8px;">Welcome to Lock The Code Pro!</h1>
+  <p style="color:#6b7280;font-size:15px;margin:0 0 24px;">
+    Thank you for subscribing. Keep prepping — here's what you just unlocked:
+  </p>
+
+  <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:0 0 24px;">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+      <span style="font-size:20px;">🤖</span>
+      <div>
+        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">AI Tutor</p>
+        <p style="color:#6b7280;font-size:13px;margin:0;">Socratic hints that guide your thinking without spoiling the answer.</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+      <span style="font-size:20px;">🎙️</span>
+      <div>
+        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Interview Simulator</p>
+        <p style="color:#6b7280;font-size:13px;margin:0;">Realistic mock interviews with follow-ups and performance grading.</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <span style="font-size:20px;">🧠</span>
+      <div>
+        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Algorithm Flashcards</p>
+        <p style="color:#6b7280;font-size:13px;margin:0;">Spaced repetition for sliding window, two pointers, DP, and more.</p>
+      </div>
+    </div>
+  </div>
+
+  <a href="https://lockthecode.net/review"
+     style="display:inline-block;background:#a20021;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 28px;border-radius:9999px;margin-bottom:24px;">
+    Start Practicing &rarr;
+  </a>
+
+  <p style="color:#9ca3af;font-size:13px;margin:0;">
+    You can cancel anytime from <strong>Billing</strong> in your account settings — no questions asked.
+  </p>
+
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 20px;" />
+  <div style="text-align:center;">
+    <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
+    <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
+  </div>
+</div>
+""",
+    })
+
+
+def _send_cancellation_email(email: str, settings):
+    resend.api_key = settings.resend_api_key
+    resend.Emails.send({
+        "from": "Lock The Code <contact@lockthecode.net>",
+        "to": email,
+        "subject": "Your Lock The Code Pro subscription has been cancelled",
+        "html": """
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:40px;width:auto;margin-bottom:24px;" />
+  <h1 style="font-size:22px;font-weight:700;color:#313628;margin:0 0 8px;">Your Pro subscription has been cancelled</h1>
+  <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">
+    Your Pro access continues until the end of your current billing period.
+    After that you'll be on the free plan, and all your problem history and review data will still be there.
+  </p>
+
+  <p style="color:#313628;font-size:15px;font-weight:500;margin:0 0 12px;">We'd love to know what we could improve.</p>
+  <a href="mailto:contact@lockthecode.net?subject=Cancellation%20Feedback"
+     style="display:inline-block;background:#313628;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;padding:10px 24px;border-radius:9999px;margin-bottom:24px;">
+    Share your feedback &rarr;
+  </a>
+
+  <p style="color:#9ca3af;font-size:13px;margin:0;">
+    You can resubscribe anytime from <strong>Billing</strong> in your account settings.
+  </p>
+
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 20px;" />
+  <div style="text-align:center;">
+    <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:32px;width:auto;opacity:0.5;" />
+    <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;">Lock The Code &middot; lockthecode.net</p>
+  </div>
+</div>
+""",
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -45,28 +155,30 @@ def create_checkout_session(
     is_lifetime = plan == "lifetime"
 
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT stripe_customer_id FROM users WHERE id = %s", (user["id"],))
+    cur.execute("SELECT stripe_customer_id, trial_used FROM users WHERE id = %s", (user["id"],))
     row = cur.fetchone()
     customer_id = row["stripe_customer_id"] if row else None
+
+    if plan == "trial" and row and row["trial_used"]:
+        raise HTTPException(status_code=400, detail="Free trial already used. Choose a monthly, annual, or lifetime plan.")
 
     session_params: dict = {
         "line_items": [{"price": price_id, "quantity": 1}],
         "mode": "payment" if is_lifetime else "subscription",
         "success_url": f"{settings.frontend_url}/dashboard?upgrade=success",
         "cancel_url": f"{settings.frontend_url}/",
-        "metadata": {"clerk_user_id": user["id"]},
+        "metadata": {"clerk_user_id": user["id"], "plan": plan},
     }
 
     if plan == "trial":
         session_params["subscription_data"] = {
             "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
-            "metadata": {"clerk_user_id": user["id"]},
+            "metadata": {"clerk_user_id": user["id"], "plan": plan},
         }
 
     if customer_id:
         session_params["customer"] = customer_id
     elif is_lifetime:
-        # customer_creation is only valid in payment mode
         session_params["customer_creation"] = "always"
 
     session = stripe.checkout.Session.create(**session_params)
@@ -124,14 +236,32 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         clerk_user_id = (session.metadata or {}).get("clerk_user_id")
+        plan = (session.metadata or {}).get("plan", "")
         customer_id = session.customer
+        db_status = "trialing" if plan == "trial" else "active"
+
         if clerk_user_id:
-            cur.execute(
-                "UPDATE users SET is_pro = true, stripe_customer_id = %s, subscription_status = 'active' "
-                "WHERE id = %s",
-                (customer_id, clerk_user_id),
-            )
+            if plan == "trial":
+                cur.execute(
+                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, "
+                    "subscription_status = %s, trial_used = true WHERE id = %s",
+                    (customer_id, db_status, clerk_user_id),
+                )
+            else:
+                cur.execute(
+                    "UPDATE users SET is_pro = true, stripe_customer_id = %s, "
+                    "subscription_status = %s WHERE id = %s",
+                    (customer_id, db_status, clerk_user_id),
+                )
             db.commit()
+
+            if settings.resend_api_key:
+                try:
+                    email = _get_user_email(clerk_user_id, settings)
+                    if email:
+                        _send_welcome_email(email, settings)
+                except Exception:
+                    pass
 
     elif event["type"] in ("customer.subscription.updated",):
         sub = event["data"]["object"]
@@ -149,10 +279,23 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
         obj = event["data"]["object"]
         customer_id = obj.customer
         cur.execute(
+            "SELECT id FROM users WHERE stripe_customer_id = %s",
+            (customer_id,),
+        )
+        user_row = cur.fetchone()
+        cur.execute(
             "UPDATE users SET is_pro = false, subscription_status = 'canceled' "
             "WHERE stripe_customer_id = %s",
             (customer_id,),
         )
         db.commit()
+
+        if user_row and settings.resend_api_key and event["type"] == "customer.subscription.deleted":
+            try:
+                email = _get_user_email(user_row["id"], settings)
+                if email:
+                    _send_cancellation_email(email, settings)
+            except Exception:
+                pass
 
     return {"received": True}

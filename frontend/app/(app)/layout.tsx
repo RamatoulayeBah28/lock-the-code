@@ -192,6 +192,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           );
         })}
 
+        {/* Pro status — pinned to bottom of sidebar */}
+        <div className="mt-auto pt-6 px-1">
+          {proStatus?.is_pro ? (
+            <div className="pro-shimmer rounded-xl px-4 py-2.5 flex items-center gap-2">
+              <span style={{ fontSize: "13px" }}>✦</span>
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "#313628" }}>Pro</span>
+            </div>
+          ) : proStatus !== null ? (
+            <a
+              href="/pricing"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{ background: "var(--primary)", color: "white", textDecoration: "none" }}
+            >
+              <span>✦</span>
+              <span>Get Pro</span>
+            </a>
+          ) : null}
+        </div>
+
       </nav>
 
       {/* Main content — extra bottom padding on mobile so content clears the fixed bottom nav */}

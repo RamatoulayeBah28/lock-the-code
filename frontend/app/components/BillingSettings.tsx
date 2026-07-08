@@ -57,7 +57,6 @@ export default function BillingSettings() {
   }
 
   const isPro = me?.is_pro ?? false;
-  const status = me?.subscription_status;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -79,9 +78,6 @@ export default function BillingSettings() {
           }}>
             {isPro ? "Pro" : "Free"}
           </span>
-          {status && status !== "active" && (
-            <span style={{ fontSize: "12px", color: "#ef4444", textTransform: "capitalize" }}>{status}</span>
-          )}
         </div>
         {!isPro && (
           <p style={mutedStyle}>Upgrade to Pro to unlock the AI Tutor, Interview Simulator, and unlimited flashcards.</p>
