@@ -90,10 +90,13 @@ def create_billing_portal(user=Depends(get_current_user), db=Depends(get_db)):
     if not customer_id:
         raise HTTPException(status_code=400, detail="No billing account found. Upgrade to Pro first.")
 
-    portal = stripe.billing_portal.Session.create(
-        customer=customer_id,
-        return_url=f"{settings.frontend_url}/dashboard",
-    )
+    try:
+        portal = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{settings.frontend_url}/dashboard",
+        )
+    except stripe.StripeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
     return {"url": portal.url}
 
 
