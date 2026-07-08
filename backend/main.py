@@ -249,7 +249,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
         "JOIN users u ON p.user_id = u.id "
         "WHERE p.next_review_at::date <= CURRENT_DATE "
         "AND u.email_notifications_enabled = TRUE "
-        "AND u.email_notification_hour = EXTRACT(HOUR FROM now() AT TIME ZONE 'UTC')::int "
+        "AND u.email_notification_hour = EXTRACT(HOUR FROM now() AT TIME ZONE COALESCE(u.timezone, 'UTC'))::int "
         "GROUP BY p.user_id"
     )
     rows = cur.fetchall()
@@ -319,7 +319,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
 def get_notification_settings(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
-        "SELECT email_notifications_enabled, email_notification_hour FROM users WHERE id = %s",
+        "SELECT email_notifications_enabled, email_notification_hour, timezone FROM users WHERE id = %s",
         (user["id"],),
     )
     return cur.fetchone()
@@ -329,8 +329,8 @@ def get_notification_settings(user=Depends(get_current_user), db=Depends(get_db)
 def update_notification_settings(payload: NotificationSettings, user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor()
     cur.execute(
-        "UPDATE users SET email_notifications_enabled = %s, email_notification_hour = %s WHERE id = %s",
-        (payload.enabled, payload.hour, user["id"]),
+        "UPDATE users SET email_notifications_enabled = %s, email_notification_hour = %s, timezone = %s WHERE id = %s",
+        (payload.enabled, payload.hour, payload.timezone, user["id"]),
     )
     db.commit()
     return {"ok": True}

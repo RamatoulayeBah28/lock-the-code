@@ -17,6 +17,7 @@ export default function NotificationsSettings() {
   const [notifLoaded, setNotifLoaded] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   useEffect(() => {
     async function load() {
@@ -29,6 +30,8 @@ export default function NotificationsSettings() {
         const data = await res.json();
         setNotifEnabled(data.email_notifications_enabled);
         setNotifHour(data.email_notification_hour);
+        // Use stored timezone if available, otherwise keep browser-detected value
+        if (data.timezone && data.timezone !== "UTC") setTimezone(data.timezone);
       }
       setNotifLoaded(true);
     }
@@ -48,7 +51,7 @@ export default function NotificationsSettings() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ enabled: notifEnabled, hour: notifHour }),
+          body: JSON.stringify({ enabled: notifEnabled, hour: notifHour, timezone }),
         },
       );
       setNotifMsg(res.ok ? "Saved." : "Failed to save.");
@@ -105,7 +108,7 @@ export default function NotificationsSettings() {
       {/* Time picker */}
       <div style={{ opacity: notifEnabled ? 1 : 0.4, pointerEvents: notifEnabled ? "auto" : "none", display: "flex", flexDirection: "column", gap: "6px" }}>
         <label style={{ fontWeight: 500, fontSize: "14px" }}>Send at</label>
-        <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>All times are UTC</p>
+        <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>Timezone: {timezone}</p>
         <select
           value={notifHour}
           onChange={(e) => setNotifHour(Number(e.target.value))}

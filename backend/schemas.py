@@ -21,6 +21,7 @@ class ProblemUpdate(BaseModel):
 class NotificationSettings(BaseModel):
     enabled: bool
     hour: int = Field(ge=0, le=23)
+    timezone: str = "UTC"
 
 class ReviewCreate(BaseModel):
     # confidence: required int, 1-5. Field(ge=..., le=...) gives a clean 422
