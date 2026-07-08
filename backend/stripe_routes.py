@@ -269,7 +269,7 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
             # entered) and fall back to clerk_email if stripe didn't capture one.
             if settings.resend_api_key:
                 try:
-                    welcome_email = stripe_email or _get_user_email(clerk_user_id, settings, cur=cur)
+                    welcome_email = _get_user_email(clerk_user_id, settings, cur=cur)
                     if welcome_email:
                         _send_welcome_email(welcome_email, settings)
                 except Exception:
