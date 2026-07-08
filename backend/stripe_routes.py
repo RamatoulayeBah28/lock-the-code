@@ -46,30 +46,21 @@ def _send_welcome_email(email: str, settings):
   <img src="https://lockthecode.net/lock-the-code-fav.png" alt="Lock The Code" style="height:40px;width:auto;margin-bottom:24px;" />
   <h1 style="font-size:24px;font-weight:700;color:#313628;margin:0 0 8px;">Welcome to Lock The Code Pro!</h1>
   <p style="color:#6b7280;font-size:15px;margin:0 0 24px;">
-    Thank you for subscribing. Keep prepping — here's what you just unlocked:
+    Thank you for subscribing. Here's what you just unlocked:
   </p>
 
   <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:0 0 24px;">
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-      <span style="font-size:20px;">🤖</span>
-      <div>
-        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">AI Tutor</p>
-        <p style="color:#6b7280;font-size:13px;margin:0;">Socratic hints that guide your thinking without spoiling the answer.</p>
-      </div>
+    <div style="margin-bottom:14px;">
+      <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">AI Tutor</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Socratic hints that guide your thinking without spoiling the answer.</p>
     </div>
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-      <span style="font-size:20px;">🎙️</span>
-      <div>
-        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Interview Simulator</p>
-        <p style="color:#6b7280;font-size:13px;margin:0;">Realistic mock interviews with follow-ups and performance grading.</p>
-      </div>
+    <div style="margin-bottom:14px;">
+      <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Interview Simulator</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Realistic mock interviews with follow-ups and performance grading.</p>
     </div>
-    <div style="display:flex;align-items:flex-start;gap:12px;">
-      <span style="font-size:20px;">🧠</span>
-      <div>
-        <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Algorithm Flashcards</p>
-        <p style="color:#6b7280;font-size:13px;margin:0;">Spaced repetition for sliding window, two pointers, DP, and more.</p>
-      </div>
+    <div>
+      <p style="font-weight:600;color:#313628;margin:0 0 2px;font-size:15px;">Algorithm Flashcards</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Spaced repetition for sliding window, two pointers, DP, and more.</p>
     </div>
   </div>
 
