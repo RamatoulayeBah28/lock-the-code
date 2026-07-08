@@ -48,9 +48,9 @@ def get_current_user(
     cur.execute(
         "INSERT INTO users (id, clerk_email, first_name, last_name) VALUES (%s, %s, %s, %s) "
         "ON CONFLICT (id) DO UPDATE SET "
-        "clerk_email = EXCLUDED.clerk_email, "
-        "first_name = COALESCE(EXCLUDED.first_name, users.first_name), "
-        "last_name  = COALESCE(EXCLUDED.last_name,  users.last_name)",
+        "clerk_email = COALESCE(EXCLUDED.clerk_email, users.clerk_email), "
+        "first_name  = COALESCE(EXCLUDED.first_name,  users.first_name), "
+        "last_name   = COALESCE(EXCLUDED.last_name,   users.last_name)",
         (clerk_user_id, clerk_email, first_name, last_name),
     )
     db.commit()
