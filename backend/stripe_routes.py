@@ -123,7 +123,7 @@ async def stripe_webhook(request: Request, db=Depends(get_db)):
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        clerk_user_id = getattr(session.metadata, "clerk_user_id", None)
+        clerk_user_id = (session.metadata or {}).get("clerk_user_id")
         customer_id = session.customer
         if clerk_user_id:
             cur.execute(
