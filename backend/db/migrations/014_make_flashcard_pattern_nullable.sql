@@ -1,0 +1,1 @@
+ALTER TABLE flashcards ALTER COLUMN pattern_id DROP NOT NULL;

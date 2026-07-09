@@ -9,6 +9,7 @@ import {
   faXmark,
   faPlus,
   faChevronLeft,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import PaywallModal from "@/app/components/PaywallModal";
 
@@ -28,6 +29,12 @@ export default function FlashcardsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState({ correct: 0, wrong: 0 });
   const [paywallModal, setPaywallModal] = useState(false);
+  const [deckModal, setDeckModal] = useState(false);
+  const [deckTitle, setDeckTitle] = useState("");
+  const [deckCards, setDeckCards] = useState([{ front: "", back: "", pattern_id: null as number | null }]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [patterns, setPatterns] = useState<{ id: number; pattern: string }[]>([]);
 
   useEffect(() => {
     async function checkPro() {
@@ -133,6 +140,39 @@ export default function FlashcardsPage() {
 
   const card = cards[index];
 
+  async function createDeck() {
+    const trimmed = deckTitle.trim();
+    const validCards = deckCards.filter(c => c.front.trim() && c.back.trim());
+    if (!trimmed || validCards.length === 0) {
+      setCreateError("Add a title and at least one complete card.");
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: trimmed, cards: validCards }),
+      });
+      if (!res.ok) {
+        setCreateError("Something went wrong. Please try again.");
+        return;
+      }
+      setDeckModal(false);
+      setDeckTitle("");
+      setDeckCards([{ front: "", back: "", pattern_id: null }]);
+    } catch {
+      setCreateError("Something went wrong. Please try again.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   // ── DECKS VIEW ────────────────────────────────────────────────────────────
   if (view === "decks") return (
     <div className="p-6 sm:p-8 max-w-3xl mx-auto w-full">
@@ -178,9 +218,16 @@ export default function FlashcardsPage() {
 
         {/* New deck */}
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!isPro) { setPaywallModal(true); return; }
-            // TODO: open create deck modal
+            if (patterns.length === 0) {
+              const token = await getToken();
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) setPatterns(await res.json());
+            }
+            setDeckModal(true);
           }}
           className="rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-opacity cursor-pointer"
           style={{ borderColor: "rgba(49,54,40,0.2)", width: "176px", height: "176px" }}
@@ -208,6 +255,137 @@ export default function FlashcardsPage() {
           featureLabel="Flashcards"
           onClose={() => setPaywallModal(false)}
         />
+      )}
+
+      {/* Create deck modal */}
+      {deckModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={() => setDeckModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl flex flex-col gap-6 p-8 my-auto"
+            style={{ backgroundColor: "var(--surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold">New deck</h2>
+
+            {/* Deck title */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                Deck title
+              </label>
+              <input
+                value={deckTitle}
+                onChange={(e) => setDeckTitle(e.target.value)}
+                placeholder="e.g. Dynamic Programming"
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                style={{
+                  borderColor: "rgba(49,54,40,0.18)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
+              />
+            </div>
+
+            {/* Cards */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                Cards
+              </p>
+              {deckCards.map((c, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border p-4 flex flex-col gap-3"
+                  style={{ borderColor: "rgba(49,54,40,0.12)" }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium tabular-nums" style={{ color: "var(--foreground)", opacity: 0.35 }}>
+                      Card {i + 1}
+                    </span>
+                    {deckCards.length > 1 && (
+                      <button
+                        onClick={() => setDeckCards((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="cursor-pointer hover:opacity-70 transition-opacity"
+                        style={{ color: "var(--foreground)", opacity: 0.3 }}
+                      >
+                        <FontAwesomeIcon icon={faTrash} style={{ width: "0.75rem", height: "0.75rem" }} />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    value={c.front}
+                    onChange={(e) => setDeckCards((prev) => prev.map((card, idx) => idx === i ? { ...card, front: e.target.value } : card))}
+                    placeholder="Term (front)"
+                    className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                    style={{
+                      borderColor: "rgba(49,54,40,0.15)",
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                  <input
+                    value={c.back}
+                    onChange={(e) => setDeckCards((prev) => prev.map((card, idx) => idx === i ? { ...card, back: e.target.value } : card))}
+                    placeholder="Definition (back)"
+                    className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                    style={{
+                      borderColor: "rgba(49,54,40,0.15)",
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                  <select
+                    value={c.pattern_id ?? ""}
+                    onChange={(e) => setDeckCards((prev) => prev.map((card, idx) => idx === i ? { ...card, pattern_id: e.target.value ? Number(e.target.value) : null } : card))}
+                    className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                    style={{
+                      borderColor: "rgba(49,54,40,0.15)",
+                      backgroundColor: "var(--background)",
+                      color: c.pattern_id ? "var(--foreground)" : "rgba(49,54,40,0.35)",
+                    }}
+                  >
+                    <option value="">Pattern (optional)</option>
+                    {patterns.map((p) => (
+                      <option key={p.id} value={p.id}>{p.pattern}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <button
+                onClick={() => setDeckCards((prev) => [...prev, { front: "", back: "", pattern_id: null }])}
+                className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-70 transition-opacity self-start"
+                style={{ color: "var(--foreground)", opacity: 0.45 }}
+              >
+                <FontAwesomeIcon icon={faPlus} style={{ width: "0.75rem", height: "0.75rem" }} />
+                Add card
+              </button>
+            </div>
+
+            {createError && (
+              <p className="text-sm" style={{ color: "#a20021" }}>{createError}</p>
+            )}
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button
+                onClick={() => { setDeckModal(false); setDeckTitle(""); setDeckCards([{ front: "", back: "", pattern_id: null }]); setCreateError(null); }}
+                className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity"
+                style={{ borderColor: "rgba(49,54,40,0.2)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createDeck}
+                disabled={creating}
+                className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+              >
+                {creating ? "Creating..." : "Create deck"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
