@@ -35,21 +35,24 @@ export default function FlashcardsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [patterns, setPatterns] = useState<{ id: number; pattern: string }[]>([]);
+  const [userDecks, setUserDecks] = useState<{ id: number; title: string; card_count: number }[]>([]);
 
   useEffect(() => {
-    async function checkPro() {
+    async function init() {
       try {
         const token = await getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const [meRes, decksRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        if (meRes.ok) {
+          const data = await meRes.json();
           setIsPro(data.is_pro);
         }
+        if (decksRes.ok) setUserDecks(await decksRes.json());
       } catch {}
     }
-    checkPro();
+    init();
   }, [getToken]);
 
   // Spacebar toggles flip during review
@@ -163,6 +166,12 @@ export default function FlashcardsPage() {
         setCreateError("Something went wrong. Please try again.");
         return;
       }
+      // Refresh deck list
+      const token2 = await getToken();
+      const decksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks`, {
+        headers: { Authorization: `Bearer ${token2}` },
+      });
+      if (decksRes.ok) setUserDecks(await decksRes.json());
       setDeckModal(false);
       setDeckTitle("");
       setDeckCards([{ front: "", back: "", pattern_id: null }]);
@@ -215,6 +224,36 @@ export default function FlashcardsPage() {
             </p>
           </div>
         </button>
+
+        {/* User decks */}
+        {userDecks.map((deck) => (
+          <button
+            key={deck.id}
+            className="rounded-2xl border p-5 flex flex-col gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
+            style={{
+              borderColor: "rgba(49,54,40,0.15)",
+              backgroundColor: "var(--surface)",
+              width: "176px",
+              height: "176px",
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: "rgba(49,54,40,0.08)" }}
+            >
+              <FontAwesomeIcon
+                icon={faLayerGroup}
+                style={{ width: "1rem", height: "1rem", color: "var(--foreground)", opacity: 0.4 }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{deck.title}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>
+                {deck.card_count} card{deck.card_count !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </button>
+        ))}
 
         {/* New deck */}
         <button
