@@ -68,6 +68,28 @@ export default function FlashcardsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [view, sessionStatus]);
 
+  async function startUserDeck(deckId: number) {
+    setView("session");
+    setSessionStatus("loading");
+    setIndex(0);
+    setFlipped(false);
+    setStats({ correct: 0, wrong: 0 });
+    setIsFreePreview(false);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${deckId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { setSessionStatus("done"); return; }
+      const data = await res.json();
+      if (data.length === 0) { setSessionStatus("done"); return; }
+      setCards(data);
+      setSessionStatus("reviewing");
+    } catch {
+      setSessionStatus("done");
+    }
+  }
+
   async function startDeck() {
     setView("session");
     setSessionStatus("loading");
@@ -229,6 +251,7 @@ export default function FlashcardsPage() {
         {userDecks.map((deck) => (
           <button
             key={deck.id}
+            onClick={() => startUserDeck(deck.id)}
             className="rounded-2xl border p-5 flex flex-col gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
             style={{
               borderColor: "rgba(49,54,40,0.15)",
