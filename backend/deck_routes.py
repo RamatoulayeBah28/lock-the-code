@@ -50,6 +50,6 @@ def update_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=
     
     db.commit()
 
-    cur.execute("SELECT d.id, d.title, author_id, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards ON flashcards.deck_id = d.id WHERE author_id = %s AND d.id = %s GROUP BY d.id, d.title", (user["id"], deck_id))
+    cur.execute("SELECT d.id, d.title, d.author_id, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards ON flashcards.deck_id = d.id WHERE d.author_id = %s AND d.id = %s GROUP BY d.id, d.title", (user["id"], deck_id))
 
     return cur.fetchone()
