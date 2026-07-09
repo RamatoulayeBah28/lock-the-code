@@ -17,7 +17,8 @@ import {
 import PaywallModal from "@/app/components/PaywallModal";
 
 type Flashcard = { id?: number; front: string; back: string; pattern?: string };
-type View = "decks" | "session";
+type DeckCard = { id: number; front: string; back: string; pattern_id: number | null };
+type View = "decks" | "session" | "edit";
 type SessionStatus = "loading" | "reviewing" | "done";
 
 export default function FlashcardsPage() {
@@ -44,6 +45,10 @@ export default function FlashcardsPage() {
   const [deckFilter, setDeckFilter] = useState<"recent" | "created" | "studied">("recent");
   const [deckMenu, setDeckMenu] = useState<number | null>(null);
   const [editingDeck, setEditingDeck] = useState<{ id: number; title: string } | null>(null);
+  const [editDeckId, setEditDeckId] = useState<number | null>(null);
+  const [editDeckTitle, setEditDeckTitle] = useState("");
+  const [editDeckCards, setEditDeckCards] = useState<DeckCard[]>([]);
+  const [editDeckLoading, setEditDeckLoading] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -74,6 +79,65 @@ export default function FlashcardsPage() {
       setUserDecks((prev) => prev.filter((d) => d.id !== deckId));
     } catch {}
     setDeckMenu(null);
+  }
+
+  async function openEditDeck(deck: { id: number; title: string }) {
+    setEditDeckId(deck.id);
+    setEditDeckTitle(deck.title);
+    setEditDeckCards([]);
+    setEditDeckLoading(true);
+    setView("edit");
+    try {
+      const token = await getToken();
+      const fetches: Promise<Response>[] = [
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${deck.id}`, { headers: { Authorization: `Bearer ${token}` } }),
+      ];
+      if (patterns.length === 0) {
+        fetches.push(fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } }));
+      }
+      const [cardsRes, patternsRes] = await Promise.all(fetches);
+      if (cardsRes.ok) setEditDeckCards(await cardsRes.json());
+      if (patternsRes?.ok) setPatterns(await patternsRes.json());
+    } catch {}
+    setEditDeckLoading(false);
+  }
+
+  async function saveCard(card: DeckCard) {
+    try {
+      const token = await getToken();
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${card.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ front: card.front, back: card.back, pattern_id: card.pattern_id }),
+      });
+    } catch {}
+  }
+
+  async function deleteCard(cardId: number) {
+    try {
+      const token = await getToken();
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${cardId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setEditDeckCards((prev) => prev.filter((c) => c.id !== cardId));
+    } catch {}
+  }
+
+  async function addCardToDeck() {
+    if (!editDeckId) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks/${editDeckId}/cards`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ front: "", back: "", pattern_id: null }),
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setEditDeckCards((prev) => [...prev, newCard]);
+      }
+    } catch {}
   }
 
   async function renameDeck(deckId: number, title: string) {
@@ -240,9 +304,10 @@ export default function FlashcardsPage() {
     }
   }
 
-  const filteredDecks = userDecks.filter((d) =>
-    d.title.toLowerCase().includes(deckSearch.toLowerCase())
-  );
+  const q = deckSearch.toLowerCase();
+  const systemDeckVisible = !q || "interview patterns".includes(q);
+  const filteredDecks = userDecks.filter((d) => d.title.toLowerCase().includes(q));
+  const noResults = q && !systemDeckVisible && filteredDecks.length === 0;
 
   // ── DECKS VIEW ────────────────────────────────────────────────────────────
   if (view === "decks") return (
@@ -256,23 +321,20 @@ export default function FlashcardsPage() {
 
       {/* Filter + Search row */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="flex gap-1 rounded-full p-0.5" style={{ backgroundColor: "rgba(49,54,40,0.07)" }}>
-          {(["recent", "created", "studied"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setDeckFilter(f)}
-              className="rounded-full px-3 py-1 text-xs font-medium capitalize transition-all cursor-pointer"
-              style={{
-                backgroundColor: deckFilter === f ? "var(--surface)" : "transparent",
-                color: "var(--foreground)",
-                opacity: deckFilter === f ? 1 : 0.45,
-                boxShadow: deckFilter === f ? "0 1px 3px rgba(49,54,40,0.1)" : "none",
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <select
+          value={deckFilter}
+          onChange={(e) => setDeckFilter(e.target.value as typeof deckFilter)}
+          className="rounded-full border text-xs font-medium px-3 py-1.5 outline-none cursor-pointer"
+          style={{
+            borderColor: "rgba(49,54,40,0.15)",
+            backgroundColor: "var(--surface)",
+            color: "var(--foreground)",
+          }}
+        >
+          <option value="recent">Recent</option>
+          <option value="created">Created</option>
+          <option value="studied">Studied</option>
+        </select>
         <div className="flex items-center gap-2 flex-1 min-w-[160px] rounded-full border px-3 py-1.5"
           style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--surface)" }}>
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ width: "0.75rem", height: "0.75rem", color: "var(--foreground)", opacity: 0.35 }} />
@@ -295,8 +357,15 @@ export default function FlashcardsPage() {
           ))}
         </div>
       ) : (
+        <>
+        {noResults ? (
+          <p className="text-sm py-8" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+            No results found for &ldquo;{deckSearch}&rdquo;
+          </p>
+        ) : (
         <div className="flex flex-wrap gap-4">
-          {/* System deck */}
+          {/* System deck — hidden when search doesn't match */}
+          {systemDeckVisible && (
           <button
             onClick={startDeck}
             className="rounded-2xl border p-5 flex flex-col gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
@@ -310,6 +379,7 @@ export default function FlashcardsPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>22 cards</p>
             </div>
           </button>
+          )}
 
           {/* User decks */}
           {filteredDecks.map((deck) => (
@@ -343,6 +413,14 @@ export default function FlashcardsPage() {
                   style={{ backgroundColor: "var(--surface)", borderColor: "rgba(49,54,40,0.12)", boxShadow: "0 4px 16px rgba(49,54,40,0.1)" }}
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <button
+                    onClick={() => { openEditDeck(deck); setDeckMenu(null); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs hover:opacity-70 cursor-pointer transition-opacity"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    <FontAwesomeIcon icon={faPencil} style={{ width: "0.7rem", height: "0.7rem", opacity: 0.5 }} />
+                    Edit cards
+                  </button>
                   <button
                     onClick={() => { setEditingDeck({ id: deck.id, title: deck.title }); setDeckMenu(null); }}
                     className="flex items-center gap-2 px-3 py-2 text-xs hover:opacity-70 cursor-pointer transition-opacity"
@@ -384,6 +462,8 @@ export default function FlashcardsPage() {
             <p className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.4 }}>New deck</p>
           </button>
         </div>
+      )}
+        </>
       )}
 
       {/* Rename modal */}
@@ -548,6 +628,103 @@ export default function FlashcardsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── EDIT VIEW ─────────────────────────────────────────────────────────────
+  if (view === "edit") return (
+    <div className="p-6 sm:p-8 max-w-2xl mx-auto w-full flex flex-col gap-6">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setView("decks")}
+          className="flex items-center gap-1.5 text-sm cursor-pointer hover:opacity-70 transition-opacity"
+          style={{ color: "var(--foreground)", opacity: 0.5 }}
+        >
+          <FontAwesomeIcon icon={faChevronLeft} style={{ width: "0.7rem", height: "0.7rem" }} />
+          Flashcards
+        </button>
+      </div>
+
+      <h1 className="text-lg font-semibold">{editDeckTitle}</h1>
+
+      {editDeckLoading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border animate-pulse"
+              style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)", height: "128px" }} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {editDeckCards.length === 0 && (
+            <p className="text-sm py-4" style={{ color: "var(--foreground)", opacity: 0.35 }}>
+              No cards yet. Add one below.
+            </p>
+          )}
+          {editDeckCards.map((card, i) => (
+            <div key={card.id} className="rounded-xl border p-4 flex flex-col gap-3"
+              style={{ borderColor: "rgba(49,54,40,0.12)", backgroundColor: "var(--surface)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium tabular-nums" style={{ color: "var(--foreground)", opacity: 0.35 }}>
+                  Card {i + 1}
+                </span>
+                <button
+                  onClick={() => deleteCard(card.id)}
+                  className="cursor-pointer hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--foreground)", opacity: 0.3 }}
+                >
+                  <FontAwesomeIcon icon={faTrash} style={{ width: "0.75rem", height: "0.75rem" }} />
+                </button>
+              </div>
+              <textarea
+                value={card.front}
+                onChange={(e) => setEditDeckCards((prev) => prev.map((c) => c.id === card.id ? { ...c, front: e.target.value } : c))}
+                onBlur={() => { const c = editDeckCards.find((c) => c.id === card.id); if (c) saveCard(c); }}
+                placeholder="Term (front)"
+                rows={2}
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 resize-none"
+                style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+              <textarea
+                value={card.back}
+                onChange={(e) => setEditDeckCards((prev) => prev.map((c) => c.id === card.id ? { ...c, back: e.target.value } : c))}
+                onBlur={() => { const c = editDeckCards.find((c) => c.id === card.id); if (c) saveCard(c); }}
+                placeholder="Definition (back)"
+                rows={2}
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 resize-none"
+                style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+              <select
+                value={card.pattern_id ?? ""}
+                onChange={async (e) => {
+                  const updated = { ...card, pattern_id: e.target.value ? Number(e.target.value) : null };
+                  setEditDeckCards((prev) => prev.map((c) => c.id === card.id ? updated : c));
+                  await saveCard(updated);
+                }}
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                style={{
+                  borderColor: "rgba(49,54,40,0.15)",
+                  backgroundColor: "var(--background)",
+                  color: card.pattern_id ? "var(--foreground)" : "rgba(49,54,40,0.35)",
+                }}
+              >
+                <option value="">Pattern (optional)</option>
+                {patterns.map((p) => (
+                  <option key={p.id} value={p.id}>{p.pattern}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+          <button
+            onClick={addCardToDeck}
+            className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-70 transition-opacity self-start mt-2"
+            style={{ color: "var(--foreground)", opacity: 0.45 }}
+          >
+            <FontAwesomeIcon icon={faPlus} style={{ width: "0.75rem", height: "0.75rem" }} />
+            Add card
+          </button>
         </div>
       )}
     </div>

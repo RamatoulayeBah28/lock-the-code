@@ -55,8 +55,21 @@ def update_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=
     return cur.fetchone()
 
 @router.get("/flashcards/{deck_id}")
-def get_deck_flashcards(deck_id:int, user=Depends(get_current_user), db=Depends(get_db)):
-    cur  = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT id, front, back, deck_id FROM flashcards WHERE deck_id = %s AND author_id = %s", (deck_id, user["id"],))
-
+def get_deck_flashcards(deck_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, front, back, pattern_id, deck_id FROM flashcards WHERE deck_id = %s AND author_id = %s", (deck_id, user["id"]))
     return cur.fetchall()
+
+@router.post("/decks/{deck_id}/cards")
+def add_card_to_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id FROM decks WHERE id = %s AND author_id = %s", (deck_id, user["id"]))
+    if cur.fetchone() is None:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    cur.execute(
+        "INSERT INTO flashcards (author_id, pattern_id, front, back, deck_id) VALUES (%s, %s, %s, %s, %s) RETURNING id, front, back, pattern_id, deck_id",
+        (user["id"], payload.get("pattern_id"), payload.get("front", ""), payload.get("back", ""), deck_id)
+    )
+    new_card = cur.fetchone()
+    db.commit()
+    return new_card

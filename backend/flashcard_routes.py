@@ -74,3 +74,27 @@ def review_flashcard(flashcard_id: int, payload: dict, user=Depends(get_current_
     db.commit()
 
     return {"new_interval_days": new_interval}
+
+
+@router.patch("/flashcards/{flashcard_id}")
+def update_flashcard(flashcard_id: int, payload: dict, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        "UPDATE flashcards SET front = %s, back = %s, pattern_id = %s "
+        "WHERE id = %s AND author_id = %s",
+        (payload["front"], payload["back"], payload.get("pattern_id"), flashcard_id, user["id"])
+    )
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Flashcard not found")
+    db.commit()
+    cur.execute("SELECT id, front, back, pattern_id FROM flashcards WHERE id = %s", (flashcard_id,))
+    return cur.fetchone()
+
+
+@router.delete("/flashcards/{flashcard_id}")
+def delete_flashcard(flashcard_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("DELETE FROM flashcards WHERE id = %s AND author_id = %s", (flashcard_id, user["id"]))
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Flashcard not found")
+    db.commit()
