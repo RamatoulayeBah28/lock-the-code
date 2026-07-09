@@ -174,45 +174,29 @@ export default function PricingPage() {
 
         {error && <p className="text-center text-red-600 mb-6">{error}</p>}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-16">
-          {/* Free tier */}
-          <div className="rounded-xl border border-foreground/10 p-6 flex flex-col gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground/40 mb-1">
-                Free
-              </p>
-              <p className="text-3xl font-semibold">$0</p>
-              <p className="text-sm text-foreground/50">forever</p>
-            </div>
-            <ul className="flex flex-col gap-2 flex-1">
+        {/* Free tier — full-width row */}
+        <div className="rounded-xl border border-foreground/10 p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-6">
+          <div className="flex-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground/40 mb-1">Free — forever</p>
+            <ul className="flex flex-wrap gap-x-6 gap-y-1 mt-2">
               {FREE_FEATURES.map((f) => (
-                <li
-                  key={f}
-                  className="flex items-start gap-2 text-sm text-foreground/70"
-                >
-                  <FontAwesomeIcon
-                    icon={faCheck}
-                    style={{
-                      width: "0.875rem",
-                      height: "0.875rem",
-                      color: "var(--success)",
-                      marginTop: "0.125rem",
-                      flexShrink: 0,
-                    }}
-                  />
+                <li key={f} className="flex items-center gap-2 text-sm text-foreground/70">
+                  <FontAwesomeIcon icon={faCheck} style={{ width: "0.75rem", height: "0.75rem", color: "var(--success)", flexShrink: 0 }} />
                   {f}
                 </li>
               ))}
             </ul>
-            <a
-              href="/dashboard"
-              className="rounded-full border border-foreground/20 text-foreground/60 font-medium text-sm h-10 px-6 flex items-center justify-center hover:opacity-70 transition-opacity"
-            >
-              Continue Free
-            </a>
           </div>
+          <a
+            href="/dashboard"
+            className="rounded-full border border-foreground/20 text-foreground/60 font-medium text-sm h-10 px-6 flex items-center justify-center hover:opacity-70 transition-opacity shrink-0"
+          >
+            Continue Free
+          </a>
+        </div>
 
-          {/* Pro plans */}
+        {/* Pro plans — 2×2 grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
