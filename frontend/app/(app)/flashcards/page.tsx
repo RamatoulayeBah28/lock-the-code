@@ -791,12 +791,15 @@ export default function FlashcardsPage() {
         </div>
       )}
 
-      {/* Loading */}
+      {/* Loading skeleton */}
       {sessionStatus === "loading" && (
-        <div className="flex items-center justify-center py-24">
-          <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.35 }}>
-            Loading...
-          </p>
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border animate-pulse"
+            style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)", minHeight: "280px" }} />
+          <div className="flex justify-center gap-6 pt-2">
+            <div className="w-16 h-16 rounded-full animate-pulse" style={{ backgroundColor: "rgba(49,54,40,0.08)" }} />
+            <div className="w-16 h-16 rounded-full animate-pulse" style={{ backgroundColor: "rgba(49,54,40,0.08)" }} />
+          </div>
         </div>
       )}
 
