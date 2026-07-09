@@ -53,3 +53,10 @@ def update_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=
     cur.execute("SELECT d.id, d.title, d.author_id, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s AND d.id = %s GROUP BY d.id, d.title", (user["id"], deck_id))
 
     return cur.fetchone()
+
+@router.get("/flashcards/{deck_id}")
+def get_deck_flashcards(deck_id:int, user=Depends(get_current_user), db=Depends(get_db)):
+    cur  = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, front, back, deck_id FROM flashcards WHERE deck_id = %s AND author_id = %s", (deck_id, user["id"],))
+
+    return cur.fetchall()
