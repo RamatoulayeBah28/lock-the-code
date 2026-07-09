@@ -34,6 +34,13 @@ const FREE_ITEMS: {
     shortLabel: "Problems",
     icon: faList,
   },
+
+  {
+    href: "/flashcards",
+    label: "Flashcards",
+    shortLabel: "Flashcards",
+    icon: faLayerGroup,
+  },
 ];
 
 const PRO_ITEMS: {
@@ -53,12 +60,6 @@ const PRO_ITEMS: {
     label: "Simulate a Real Interview",
     shortLabel: "Interview",
     icon: faMicrophone,
-  },
-  {
-    href: "/flashcards",
-    label: "Flashcards",
-    shortLabel: "Flashcards",
-    icon: faLayerGroup,
   },
 ];
 
@@ -195,7 +196,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           );
         })}
-
       </nav>
 
       {/* Main content — extra bottom padding on mobile so content clears the fixed bottom nav */}

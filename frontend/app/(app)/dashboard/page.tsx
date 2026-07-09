@@ -6,13 +6,23 @@ import Image from "next/image";
 import { usePostHog } from "posthog-js/react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPen,
+  faTrash,
+  faPlus,
+  faMagnifyingGlass,
+  faXmark,
+  faArrowUpRightFromSquare,
+} from "@fortawesome/free-solid-svg-icons";
 
 function UpgradeBanner() {
   const searchParams = useSearchParams();
   if (searchParams.get("upgrade") !== "success") return null;
   return (
-    <div className="mb-6 rounded-xl bg-success/20 border border-success/30 px-4 py-3 text-sm font-medium text-foreground">
+    <div
+      className="mb-6 rounded-xl px-4 py-3 text-sm font-medium"
+      style={{ backgroundColor: "rgba(49,54,40,0.08)", color: "var(--foreground)" }}
+    >
       Welcome to Lock The Code Pro ❤︎
     </div>
   );
@@ -26,6 +36,12 @@ type Problem = {
   url: string | null;
   topics: string[];
   patterns: string[];
+};
+
+const DIFF_COLOR: Record<string, string> = {
+  easy: "#22c55e",
+  medium: "#f59e0b",
+  hard: "#ef4444",
 };
 
 export default function DashboardPage() {
@@ -43,78 +59,39 @@ export default function DashboardPage() {
   const [url, setUrl] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<number[]>([]);
   const [selectedPatterns, setSelectedPatterns] = useState<number[]>([]);
-  const [allTopics, setAllTopics] = useState<{ id: number; topic: string }[]>(
-    [],
-  );
-  const [allPatterns, setAllPatterns] = useState<
-    { id: number; pattern: string }[]
-  >([]);
+  const [allTopics, setAllTopics] = useState<{ id: number; topic: string }[]>([]);
+  const [allPatterns, setAllPatterns] = useState<{ id: number; pattern: string }[]>([]);
+  const [search, setSearch] = useState("");
+  const [diffFilter, setDiffFilter] = useState<"" | "easy" | "medium" | "hard">("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
-
-    async function loadProblems() {
+    async function loadAll() {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        setError(`Request failed: ${res.status}`);
-        return;
+      const [problemsRes, topicsRes, patternsRes, calRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/calendar/token`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (!problemsRes.ok) { setError(`Request failed: ${problemsRes.status}`); return; }
+      setProblems(await problemsRes.json());
+      if (topicsRes.ok) setAllTopics(await topicsRes.json());
+      if (patternsRes.ok) setAllPatterns(await patternsRes.json());
+      if (calRes.ok) {
+        const { token: calToken, user_id } = await calRes.json();
+        setCalendarIcsUrl(`${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`);
       }
-      setProblems(await res.json());
     }
-
-    loadProblems().catch((err) => setError(String(err)));
-  }, [isLoaded, isSignedIn, getToken]);
-
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-
-    async function fetchTopics() {
-      const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setAllTopics(await res.json());
-    }
-
-    async function fetchPatterns() {
-      const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setAllPatterns(await res.json());
-    }
-
-    async function fetchCalendarToken() {
-      const token = await getToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/calendar/token`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) return;
-      const { token: calToken, user_id } = await res.json();
-      setCalendarIcsUrl(
-        `${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`,
-      );
-    }
-
-    fetchTopics().catch((err) => setError(String(err)));
-    fetchPatterns().catch((err) => setError(String(err)));
-    fetchCalendarToken().catch(() => {});
+    loadAll().catch((err) => setError(String(err)));
   }, [isLoaded, isSignedIn, getToken]);
 
   function handleCalendarSync(type: "google" | "apple") {
     if (!calendarIcsUrl) return;
     const webcalUrl = calendarIcsUrl.replace(/^https?:\/\//, "webcal://");
     if (type === "google") {
-      window.open(
-        `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`,
-        "_blank",
-      );
+      window.open(`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`, "_blank");
     } else {
       const a = document.createElement("a");
       a.href = webcalUrl;
@@ -126,380 +103,423 @@ export default function DashboardPage() {
 
   function openAddForm() {
     setEditingProblem(null);
-    setTitle("");
-    setDifficulty("");
-    setNote("");
-    setUrl("");
-    setSelectedTopics([]);
-    setSelectedPatterns([]);
+    setTitle(""); setDifficulty(""); setNote(""); setUrl("");
+    setSelectedTopics([]); setSelectedPatterns([]);
     setShowForm(true);
   }
 
   function openEditForm(p: Problem) {
     setEditingProblem(p);
-    setTitle(p.title);
-    setDifficulty(p.difficulty);
-    setNote(p.note ?? "");
-    setUrl(p.url ?? "");
-    setSelectedTopics(
-      p.topics.flatMap((name) => {
-        const match = allTopics.find((t) => t.topic === name);
-        return match ? [match.id] : [];
-      }),
-    );
-    setSelectedPatterns(
-      p.patterns.flatMap((name) => {
-        const match = allPatterns.find((t) => t.pattern === name);
-        return match ? [match.id] : [];
-      }),
-    );
+    setTitle(p.title); setDifficulty(p.difficulty);
+    setNote(p.note ?? ""); setUrl(p.url ?? "");
+    setSelectedTopics(p.topics.flatMap((name) => { const m = allTopics.find((t) => t.topic === name); return m ? [m.id] : []; }));
+    setSelectedPatterns(p.patterns.flatMap((name) => { const m = allPatterns.find((t) => t.pattern === name); return m ? [m.id] : []; }));
     setShowForm(true);
   }
 
-  function closeForm() {
-    setShowForm(false);
-    setEditingProblem(null);
+  function closeForm() { setShowForm(false); setEditingProblem(null); }
+
+  function toggleTopic(id: number) {
+    setSelectedTopics((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  function togglePattern(id: number) {
+    setSelectedPatterns((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     const token = await getToken();
-    const body = {
-      title,
-      difficulty,
-      note: note || null,
-      url: url || null,
-      topic_ids: selectedTopics,
-      pattern_ids: selectedPatterns,
-    };
-
-    if (editingProblem) {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/problems/${editingProblem.id}`,
-        {
+    const body = { title, difficulty, note: note || null, url: url || null, topic_ids: selectedTopics, pattern_ids: selectedPatterns };
+    try {
+      if (editingProblem) {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${editingProblem.id}`, {
           method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) {
-        setError(`Request failed: ${res.status}`);
-        return;
+        });
+        if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+        const updated = await res.json();
+        setProblems((problems ?? []).map((p) => (p.id === editingProblem.id ? updated : p)));
+      } else {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+        const created = await res.json();
+        setProblems([...(problems ?? []), created]);
+        ph?.capture("problem_added", { difficulty, topics: selectedTopics.length, patterns: selectedPatterns.length });
       }
-      const updated = await res.json();
-      setProblems(
-        (problems ?? []).map((p) => (p.id === editingProblem.id ? updated : p)),
-      );
-    } else {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        setError(`Request failed: ${res.status}`);
-        return;
-      }
-      const created = await res.json();
-      setProblems([...(problems ?? []), created]);
-      ph?.capture("problem_added", {
-        difficulty,
-        topics: selectedTopics.length,
-        patterns: selectedPatterns.length,
-      });
+      closeForm();
+    } finally {
+      setSubmitting(false);
     }
-
-    closeForm();
   }
 
   async function deleteProblem(id: number) {
     setDeletingId(id);
     const token = await getToken();
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/problems/${id}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    if (!res.ok) {
-      setError(`Request failed: ${res.status}`);
-      setDeletingId(null);
-      return;
-    }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { setError(`Request failed: ${res.status}`); setDeletingId(null); return; }
     setProblems((problems ?? []).filter((p) => p.id !== id));
     setDeletingId(null);
   }
 
+  const q = search.toLowerCase();
+  const filtered = (problems ?? []).filter((p) => {
+    if (diffFilter && p.difficulty !== diffFilter) return false;
+    if (q && !p.title.toLowerCase().includes(q) &&
+        !p.topics.some((t) => t.toLowerCase().includes(q)) &&
+        !p.patterns.some((pt) => pt.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
   if (error) return <p className="p-8 text-red-600">{error}</p>;
-  if (problems === null)
-    return (
-      <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-36 rounded bg-foreground/10 animate-pulse" />
-          <div className="h-9 w-40 rounded-full bg-foreground/10 animate-pulse" />
-        </div>
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-foreground/10 p-4">
-              <div className="h-5 w-3/4 rounded bg-foreground/10 animate-pulse mb-2" />
-              <div className="h-4 w-1/2 rounded bg-foreground/10 animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </main>
-    );
+
+  if (problems === null) return (
+    <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-7 w-36 rounded bg-foreground/10 animate-pulse" />
+        <div className="h-9 w-32 rounded-full bg-foreground/10 animate-pulse" />
+      </div>
+      <div className="h-10 w-full rounded-full bg-foreground/10 animate-pulse mb-4" />
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border p-4 animate-pulse" style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)" }}>
+            <div className="h-5 w-3/4 rounded bg-foreground/10 mb-2" />
+            <div className="h-4 w-1/3 rounded bg-foreground/10" />
+          </div>
+        ))}
+      </div>
+    </main>
+  );
 
   return (
     <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
       <Suspense fallback={null}>
         <UpgradeBanner />
       </Suspense>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Your Problems</h1>
-        <div className="flex items-center gap-2">
-          {/* Google Calendar */}
-          <div className="relative group">
-            <button
-              onClick={() => handleCalendarSync("google")}
-              disabled={!calendarIcsUrl}
-              className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
-              aria-label="Sync to Google Calendar"
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-lg font-semibold">My Problems</h1>
+          {problems.length > 0 && (
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "rgba(49,54,40,0.08)", color: "var(--foreground)", opacity: 0.6 }}
             >
-              <Image
-                src="/google-cal-icon.png"
-                alt="Google Calendar"
-                width={32}
-                height={32}
-              />
+              {problems.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Calendar sync */}
+          <div className="relative group">
+            <button onClick={() => handleCalendarSync("google")} disabled={!calendarIcsUrl}
+              className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
+              aria-label="Sync to Google Calendar">
+              <Image src="/google-cal-icon.png" alt="Google Calendar" width={28} height={28} />
             </button>
             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               Sync to Google Calendar
             </span>
           </div>
-          {/* Apple Calendar */}
           <div className="relative group">
-            <button
-              disabled
-              className="flex items-center justify-center opacity-40 cursor-not-allowed"
-              aria-label="Sync to Apple Calendar (coming soon)"
-            >
-              <Image
-                src="/apple-cal-icon.png"
-                alt="Apple Calendar"
-                width={32}
-                height={32}
-              />
+            <button disabled className="flex items-center justify-center opacity-30 cursor-not-allowed" aria-label="Apple Calendar coming soon">
+              <Image src="/apple-cal-icon.png" alt="Apple Calendar" width={28} height={28} />
             </button>
             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               Apple Calendar — coming soon
             </span>
           </div>
+          <button
+            onClick={openAddForm}
+            className="flex items-center gap-1.5 rounded-full h-9 px-4 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+          >
+            <FontAwesomeIcon icon={faPlus} style={{ width: "0.7rem", height: "0.7rem" }} />
+            Add problem
+          </button>
         </div>
       </div>
 
+      {/* Search + difficulty filter */}
+      {problems.length > 0 && (
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
+          <div className="flex items-center gap-2 flex-1 min-w-[160px] rounded-full border px-3 py-2"
+            style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--surface)" }}>
+            <FontAwesomeIcon icon={faMagnifyingGlass} style={{ width: "0.75rem", height: "0.75rem", color: "var(--foreground)", opacity: 0.35 }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search problems"
+              className="flex-1 text-xs bg-transparent outline-none"
+              style={{ color: "var(--foreground)" }}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="cursor-pointer hover:opacity-70 transition-opacity">
+                <FontAwesomeIcon icon={faXmark} style={{ width: "0.7rem", height: "0.7rem", color: "var(--foreground)", opacity: 0.35 }} />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            {(["", "easy", "medium", "hard"] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDiffFilter(d)}
+                className="rounded-full border text-xs px-3 py-1.5 font-medium cursor-pointer transition-all"
+                style={{
+                  borderColor: diffFilter === d ? (d ? DIFF_COLOR[d] : "var(--foreground)") : "rgba(49,54,40,0.15)",
+                  color: diffFilter === d ? (d ? DIFF_COLOR[d] : "var(--foreground)") : "var(--foreground)",
+                  backgroundColor: diffFilter === d ? (d ? `${DIFF_COLOR[d]}15` : "rgba(49,54,40,0.06)") : "var(--surface)",
+                  opacity: diffFilter === d ? 1 : 0.55,
+                }}
+              >
+                {d === "" ? "All" : d.charAt(0).toUpperCase() + d.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Problem list */}
       {problems.length === 0 ? (
-        <p className="text-foreground/60">
-          No problems yet — add your first one to get started.
+        <div className="flex flex-col items-center gap-3 py-20 text-center">
+          <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.4 }}>No problems yet.</p>
+          <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.3 }}>Click &ldquo;Add problem&rdquo; to get started.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm py-8" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+          No results for &ldquo;{search}&rdquo;
         </p>
       ) : (
-        <ul className="flex flex-col gap-4">
-          {problems.map((p) => (
+        <ul className="flex flex-col gap-2.5">
+          {filtered.map((p) => (
             <li
               key={p.id}
-              className="rounded-xl border border-foreground/10 p-4 relative"
+              className="rounded-xl border p-4"
+              style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)" }}
             >
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button
-                  onClick={() => openEditForm(p)}
-                  className="text-foreground/40 hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <FontAwesomeIcon
-                    icon={faPen}
-                    style={{
-                      width: "0.875rem",
-                      height: "0.875rem",
-                      color: "var(--success)",
-                    }}
-                  />
-                </button>
-                <button
-                  onClick={() => deleteProblem(p.id)}
-                  disabled={deletingId === p.id}
-                  className="text-foreground/40 hover:text-primary transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <FontAwesomeIcon
-                    icon={faTrash}
-                    style={{
-                      width: "0.875rem",
-                      height: "0.875rem",
-                      color: "var(--primary)",
-                    }}
-                  />
-                </button>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-sm">{p.title}</p>
+                    {p.difficulty && (
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{ color: DIFF_COLOR[p.difficulty] ?? "var(--foreground)", backgroundColor: `${DIFF_COLOR[p.difficulty] ?? "rgba(49,54,40,0.08)"}18` }}
+                      >
+                        {p.difficulty.charAt(0).toUpperCase() + p.difficulty.slice(1)}
+                      </span>
+                    )}
+                  </div>
+
+                  {(p.topics.length > 0 || p.patterns.length > 0) && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {p.topics.map((t) => (
+                        <span key={t} className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: "rgba(49,54,40,0.07)", color: "var(--foreground)", opacity: 0.7 }}>
+                          {t}
+                        </span>
+                      ))}
+                      {p.patterns.map((pt) => (
+                        <span key={pt} className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: "rgba(49,54,40,0.07)", color: "var(--foreground)", opacity: 0.7 }}>
+                          {pt}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {p.note && (
+                    <p className="text-xs mt-2 italic" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                      {p.note}
+                    </p>
+                  )}
+
+                  {p.url && (
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs mt-2 hover:opacity-80 transition-opacity"
+                      style={{ color: "var(--accent-dark, var(--foreground))", opacity: 0.6 }}
+                    >
+                      View problem
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ width: "0.6rem", height: "0.6rem" }} />
+                    </a>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => openEditForm(p)}
+                    className="cursor-pointer hover:opacity-70 transition-opacity"
+                    style={{ color: "var(--foreground)", opacity: 0.3 }}
+                  >
+                    <FontAwesomeIcon icon={faPen} style={{ width: "0.8rem", height: "0.8rem" }} />
+                  </button>
+                  <button
+                    onClick={() => deleteProblem(p.id)}
+                    disabled={deletingId === p.id}
+                    className="cursor-pointer hover:opacity-70 transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
+                    style={{ color: "#a20021" }}
+                  >
+                    <FontAwesomeIcon icon={faTrash} style={{ width: "0.8rem", height: "0.8rem" }} />
+                  </button>
+                </div>
               </div>
-              <p className="font-medium pr-16">{p.title}</p>
-              <p className="text-sm text-foreground/60">
-                {p.difficulty} · {p.topics.join(", ")} · {p.patterns.join(", ")}
-              </p>
-              {p.note && (
-                <p className="italic text-sm text-foreground/60">
-                  Note: {p.note}
-                </p>
-              )}
-              {p.url && (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline"
-                >
-                  View problem ↗
-                </a>
-              )}
             </li>
           ))}
         </ul>
       )}
 
-      <button
-        className="rounded-full bg-primary mt-4 text-primary-foreground font-medium text-base h-12 px-8 cursor-pointer transition-opacity hover:opacity-90"
-        onClick={openAddForm}
-      >
-        Add Problem
-      </button>
-
+      {/* Add / Edit modal */}
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="mt-6 flex flex-col gap-4 rounded-xl border border-foreground/10 p-6"
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={closeForm}
         >
-          <h2 className="font-semibold">
-            {editingProblem ? "Edit Problem" : "Add Problem"}
-          </h2>
+          <form
+            onSubmit={handleSubmit}
+            className="w-full max-w-lg rounded-2xl flex flex-col gap-5 p-8 my-auto"
+            style={{ backgroundColor: "var(--surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold">{editingProblem ? "Edit problem" : "Add problem"}</h2>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Title</label>
-            <input
-              type="text"
-              value={title}
-              placeholder="Two Sum, Valid Palindrome..."
-              onChange={(e) => setTitle(e.target.value)}
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Title</label>
+              <input
+                type="text"
+                value={title}
+                placeholder="Two Sum, Valid Palindrome..."
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Difficulty</label>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <option value="">Select difficulty</option>
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Difficulty</label>
+              <div className="flex gap-2">
+                {(["easy", "medium", "hard"] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDifficulty(difficulty === d ? "" : d)}
+                    className="rounded-full border px-4 py-1.5 text-xs font-medium cursor-pointer transition-all"
+                    style={{
+                      borderColor: difficulty === d ? DIFF_COLOR[d] : "rgba(49,54,40,0.15)",
+                      color: difficulty === d ? DIFF_COLOR[d] : "var(--foreground)",
+                      backgroundColor: difficulty === d ? `${DIFF_COLOR[d]}15` : "transparent",
+                      opacity: difficulty === d ? 1 : 0.5,
+                    }}
+                  >
+                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Topic(s)</label>
-            <p className="text-xs text-foreground/50">
-              Hold Cmd/Ctrl to select multiple
-            </p>
-            <select
-              multiple
-              value={selectedTopics.map(String)}
-              onChange={(e) =>
-                setSelectedTopics(
-                  Array.from(e.target.selectedOptions, (opt) =>
-                    Number(opt.value),
-                  ),
-                )
-              }
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 h-36"
-            >
-              {allTopics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.topic}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Topics</label>
+              <div className="flex flex-wrap gap-1.5">
+                {allTopics.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggleTopic(t.id)}
+                    className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all"
+                    style={{
+                      borderColor: selectedTopics.includes(t.id) ? "var(--foreground)" : "rgba(49,54,40,0.15)",
+                      backgroundColor: selectedTopics.includes(t.id) ? "var(--foreground)" : "transparent",
+                      color: selectedTopics.includes(t.id) ? "var(--surface)" : "var(--foreground)",
+                      opacity: selectedTopics.includes(t.id) ? 1 : 0.5,
+                    }}
+                  >
+                    {t.topic}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Pattern(s)</label>
-            <p className="text-xs text-foreground/50">
-              Hold Cmd/Ctrl to select multiple
-            </p>
-            <select
-              multiple
-              value={selectedPatterns.map(String)}
-              onChange={(e) =>
-                setSelectedPatterns(
-                  Array.from(e.target.selectedOptions, (opt) =>
-                    Number(opt.value),
-                  ),
-                )
-              }
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 h-36"
-            >
-              {allPatterns.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.pattern}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Patterns</label>
+              <div className="flex flex-wrap gap-1.5">
+                {allPatterns.map((pt) => (
+                  <button
+                    key={pt.id}
+                    type="button"
+                    onClick={() => togglePattern(pt.id)}
+                    className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all"
+                    style={{
+                      borderColor: selectedPatterns.includes(pt.id) ? "var(--foreground)" : "rgba(49,54,40,0.15)",
+                      backgroundColor: selectedPatterns.includes(pt.id) ? "var(--foreground)" : "transparent",
+                      color: selectedPatterns.includes(pt.id) ? "var(--surface)" : "var(--foreground)",
+                      opacity: selectedPatterns.includes(pt.id) ? 1 : 0.5,
+                    }}
+                  >
+                    {pt.pattern}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Note</label>
-            <input
-              type="text"
-              value={note}
-              placeholder="Work on brute force first..."
-              onChange={(e) => setNote(e.target.value)}
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Note <span style={{ opacity: 0.5 }}>(optional)</span></label>
+              <input
+                type="text"
+                value={note}
+                placeholder="Work on brute force first..."
+                onChange={(e) => setNote(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">
-              URL{" "}
-              <span className="text-foreground/40 font-normal">(optional)</span>
-            </label>
-            <input
-              type="url"
-              value={url}
-              placeholder="https://leetcode.com/problems/two-sum/"
-              onChange={(e) => setUrl(e.target.value)}
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>URL <span style={{ opacity: 0.5 }}>(optional)</span></label>
+              <input
+                type="url"
+                value={url}
+                placeholder="https://leetcode.com/problems/two-sum/"
+                onChange={(e) => setUrl(e.target.value)}
+                className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+            </div>
 
-          <div className="flex gap-2 self-end">
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-full border border-foreground/20 text-foreground/60 font-medium text-sm h-10 px-6 cursor-pointer hover:opacity-70"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-full bg-primary text-primary-foreground font-medium text-sm h-10 px-6 cursor-pointer transition-opacity hover:opacity-90"
-            >
-              {editingProblem ? "Update" : "Save"}
-            </button>
-          </div>
-        </form>
+            <div className="flex gap-3 justify-end pt-1">
+              <button
+                type="button"
+                onClick={closeForm}
+                className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity"
+                style={{ borderColor: "rgba(49,54,40,0.2)" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !title || !difficulty}
+                className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40"
+                style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+              >
+                {submitting ? "Saving..." : editingProblem ? "Save changes" : "Add problem"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </main>
   );
