@@ -258,7 +258,7 @@ export default function FlashcardsPage() {
         {/* New deck */}
         <button
           onClick={async () => {
-            if (!isPro) { setPaywallModal(true); return; }
+            if (isPro === false) { setPaywallModal(true); return; }
             if (patterns.length === 0) {
               const token = await getToken();
               const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, {
