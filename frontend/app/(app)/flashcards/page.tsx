@@ -121,6 +121,7 @@ export default function FlashcardsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setEditDeckCards((prev) => prev.filter((c) => c.id !== cardId));
+      setUserDecks((prev) => prev.map((d) => d.id === editDeckId ? { ...d, card_count: d.card_count - 1 } : d));
     } catch {}
   }
 
@@ -136,6 +137,7 @@ export default function FlashcardsPage() {
       if (res.ok) {
         const newCard = await res.json();
         setEditDeckCards((prev) => [...prev, newCard]);
+        setUserDecks((prev) => prev.map((d) => d.id === editDeckId ? { ...d, card_count: d.card_count + 1 } : d));
       }
     } catch {}
   }
@@ -727,6 +729,23 @@ export default function FlashcardsPage() {
           </button>
         </div>
       )}
+
+      <div className="flex gap-3 justify-end pt-2 border-t" style={{ borderColor: "rgba(49,54,40,0.1)" }}>
+        <button
+          onClick={() => setView("decks")}
+          className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity"
+          style={{ borderColor: "rgba(49,54,40,0.2)" }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => setView("decks")}
+          className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+        >
+          Save changes
+        </button>
+      </div>
     </div>
   );
 
