@@ -34,13 +34,6 @@ const FREE_ITEMS: {
     shortLabel: "Problems",
     icon: faList,
   },
-
-  {
-    href: "/flashcards",
-    label: "Flashcards",
-    shortLabel: "Flashcards",
-    icon: faLayerGroup,
-  },
 ];
 
 const PRO_ITEMS: {
@@ -48,18 +41,28 @@ const PRO_ITEMS: {
   label: string;
   shortLabel: string;
   icon: IconDefinition;
+  requiresPro: boolean;
 }[] = [
   {
     href: "/chat/tutor",
     label: "Ask Your AI Tutor",
     shortLabel: "Tutor",
     icon: faRobot,
+    requiresPro: true,
   },
   {
     href: "/chat/interview",
     label: "Simulate a Real Interview",
     shortLabel: "Interview",
     icon: faMicrophone,
+    requiresPro: true,
+  },
+  {
+    href: "/flashcards",
+    label: "Flashcards",
+    shortLabel: "Flashcards",
+    icon: faLayerGroup,
+    requiresPro: false,
   },
 ];
 
@@ -170,12 +173,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           Lock In
         </p>
-        {PRO_ITEMS.map(({ href, label, icon }) => {
+        {PRO_ITEMS.map(({ href, label, icon, requiresPro }) => {
           const active = pathname === href;
           return (
             <button
               key={href}
-              onClick={() => handleProClick(href, label)}
+              onClick={() => requiresPro ? handleProClick(href, label) : safeNavigate(href)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
               style={{
                 backgroundColor: active
@@ -237,12 +240,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
             );
           })}
-          {PRO_ITEMS.map(({ href, label, shortLabel, icon }) => {
+          {PRO_ITEMS.map(({ href, label, shortLabel, icon, requiresPro }) => {
             const active = pathname === href;
             return (
               <button
                 key={href}
-                onClick={() => handleProClick(href, label)}
+                onClick={() => requiresPro ? handleProClick(href, label) : safeNavigate(href)}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 cursor-pointer"
                 style={{ opacity: active ? 1 : 0.4 }}
               >
