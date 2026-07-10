@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faLayerGroup,
@@ -23,6 +24,7 @@ type SessionStatus = "loading" | "reviewing" | "done";
 
 export default function FlashcardsPage() {
   const { getToken } = useAuth();
+  const router = useRouter();
   const [view, setView] = useState<View>("decks");
   const [isPro, setIsPro] = useState<boolean | null>(null);
   const [cards, setCards] = useState<Flashcard[]>([]);
@@ -201,30 +203,16 @@ export default function FlashcardsPage() {
     setIndex(0);
     setFlipped(false);
     setStats({ correct: 0, wrong: 0 });
+    setIsFreePreview(false);
     try {
       const token = await getToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 402) {
-        setView("decks");
-        setPaywallModal(true);
-        return;
-      }
-      if (!res.ok) {
-        setSessionStatus("done");
-        return;
-      }
+      if (!res.ok) { setSessionStatus("done"); return; }
       const data = await res.json();
-      if (Array.isArray(data)) {
-        if (data.length === 0) { setSessionStatus("done"); return; }
-        setCards(data);
-        setIsFreePreview(false);
-      } else {
-        if (!data) { setSessionStatus("done"); return; }
-        setCards([data]);
-        setIsFreePreview(true);
-      }
+      if (data.length === 0) { setSessionStatus("done"); return; }
+      setCards(data);
       setSessionStatus("reviewing");
     } catch {
       setSessionStatus("done");
@@ -457,7 +445,7 @@ export default function FlashcardsPage() {
           {/* New deck */}
           <button
             onClick={async () => {
-              if (isPro === false) { setPaywallModal(true); return; }
+              if (isPro === false) { router.push("/pricing"); return; }
               if (patterns.length === 0) {
                 const token = await getToken();
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } });
@@ -465,9 +453,17 @@ export default function FlashcardsPage() {
               }
               setDeckModal(true);
             }}
-            className="rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-opacity cursor-pointer"
+            className="relative rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-opacity cursor-pointer"
             style={{ borderColor: "rgba(49,54,40,0.2)", width: "176px", height: "176px" }}
           >
+            {isPro === false && (
+              <span
+                className="absolute top-2.5 right-2.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: "var(--accent)", color: "#313628" }}
+              >
+                Pro
+              </span>
+            )}
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(49,54,40,0.08)" }}>
               <FontAwesomeIcon icon={faPlus} style={{ width: "1rem", height: "1rem", color: "var(--foreground)", opacity: 0.5 }} />
             </div>

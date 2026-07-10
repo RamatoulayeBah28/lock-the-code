@@ -11,36 +11,29 @@ router = APIRouter()
 def get_flashcards(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
 
-    cur.execute("SELECT is_pro, flashcard_free_use_consumed FROM users WHERE id = %s", (user["id"],))
+    cur.execute("SELECT is_pro FROM users WHERE id = %s", (user["id"],))
     row = cur.fetchone()
+    is_pro = row["is_pro"]
 
-    if not row["is_pro"]:
-        if row["flashcard_free_use_consumed"]:
-            raise HTTPException(status_code=402, detail="Free flashcard already consumed")
-        else:
-            cur.execute("UPDATE users SET flashcard_free_use_consumed = true WHERE id = %s", (user["id"],))
-            db.commit()
-            cur.execute("SELECT front, back FROM flashcards WHERE author_id IS NULL ORDER BY RANDOM() LIMIT 1")
-        card = cur.fetchone()
-        if card is None:
-            raise HTTPException(status_code=503, detail="No flashcards available yet")
-        return card
+    # Free users get system cards only; Pro users also get their custom deck cards
+    author_filter = "f.author_id IS NULL" if not is_pro else "(f.author_id IS NULL OR f.author_id = %s)"
+    params = (user["id"], user["id"]) if is_pro else (user["id"],)
 
-    # Pro users
-    cur.execute("SELECT f.id, pattern, front, back, current_interval_days, easiness_factor, repetitions, next_review_at FROM flashcards f LEFT JOIN flashcard_progress fp ON fp.flashcard_id = f.id AND fp.user_id = %s JOIN patterns p ON f.pattern_id = p.id WHERE (fp.next_review_at IS NULL OR fp.next_review_at <= now()) AND (f.author_id IS NULL OR f.author_id = %s) ORDER BY fp.next_review_at ASC NULLS FIRST", (user["id"], user["id"],))
-    cards = cur.fetchall()
-
-    return cards
+    cur.execute(
+        f"SELECT f.id, pattern, front, back FROM flashcards f "
+        f"LEFT JOIN flashcard_progress fp ON fp.flashcard_id = f.id AND fp.user_id = %s "
+        f"JOIN patterns p ON f.pattern_id = p.id "
+        f"WHERE (fp.next_review_at IS NULL OR fp.next_review_at <= now()) "
+        f"AND {author_filter} "
+        f"ORDER BY fp.next_review_at ASC NULLS FIRST",
+        params,
+    )
+    return cur.fetchall()
 
 
 @router.post("/flashcards/{flashcard_id}/review")
 def review_flashcard(flashcard_id: int, payload: dict, user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-
-    cur.execute("SELECT is_pro FROM users WHERE id = %s", (user["id"],))
-    row = cur.fetchone()
-    if not row["is_pro"]:
-        raise HTTPException(status_code=402, detail="Pro subscription required")
 
     cur.execute("SELECT user_id, flashcard_id, easiness_factor, repetitions, current_interval_days FROM flashcard_progress WHERE user_id = %s AND flashcard_id = %s", (user["id"], flashcard_id))
     row = cur.fetchone()
