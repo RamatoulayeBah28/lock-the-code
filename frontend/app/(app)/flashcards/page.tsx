@@ -51,6 +51,7 @@ export default function FlashcardsPage() {
   const [editDeckTitle, setEditDeckTitle] = useState("");
   const [editDeckCards, setEditDeckCards] = useState<DeckCard[]>([]);
   const [editDeckLoading, setEditDeckLoading] = useState(false);
+  const [activeSessionDeckId, setActiveSessionDeckId] = useState<number | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -173,6 +174,7 @@ export default function FlashcardsPage() {
   }, [view, sessionStatus]);
 
   async function startUserDeck(deckId: number) {
+    setActiveSessionDeckId(deckId);
     setView("session");
     setSessionStatus("loading");
     setIndex(0);
@@ -198,6 +200,7 @@ export default function FlashcardsPage() {
   }
 
   async function startDeck() {
+    setActiveSessionDeckId(null);
     setView("session");
     setSessionStatus("loading");
     setIndex(0);
@@ -812,43 +815,50 @@ export default function FlashcardsPage() {
       {/* Done */}
       {sessionStatus === "done" && (
         <div className="flex flex-col items-center gap-6 py-16 text-center">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-2xl font-semibold">Session complete</h2>
-            <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.5 }}>
-              {cards.length} card{cards.length !== 1 ? "s" : ""} reviewed
-            </p>
-          </div>
-          <div className="flex gap-10">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-3xl font-semibold" style={{ color: "var(--success)" }}>
-                {stats.correct}
-              </span>
-              <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.45 }}>
-                Got it
-              </span>
+          {stats.correct + stats.wrong === 0 ? (
+            /* All caught up — nothing was due */
+            <div className="flex flex-col gap-2">
+              <h2 className="text-2xl font-semibold">You&apos;re all caught up!</h2>
+              <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                No cards due right now. Check back later — the ones you struggled with will surface first.
+              </p>
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-3xl font-semibold" style={{ color: "#a20021" }}>
-                {stats.wrong}
-              </span>
-              <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.45 }}>
-                Wrong
-              </span>
-            </div>
-          </div>
+          ) : (
+            /* Session completed */
+            <>
+              <div className="flex flex-col gap-2">
+                <h2 className="text-2xl font-semibold">Session complete</h2>
+                <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                  {stats.correct + stats.wrong} card{stats.correct + stats.wrong !== 1 ? "s" : ""} reviewed
+                </p>
+              </div>
+              <div className="flex gap-10">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-3xl font-semibold" style={{ color: "var(--success)" }}>
+                    {stats.correct}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.45 }}>Got it</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-3xl font-semibold" style={{ color: "#a20021" }}>
+                    {stats.wrong}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.45 }}>Missed</span>
+                </div>
+              </div>
+            </>
+          )}
           <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setIndex(0);
-                setFlipped(false);
-                setStats({ correct: 0, wrong: 0 });
-                setSessionStatus("reviewing");
-              }}
-              className="rounded-full border h-10 px-6 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
-              style={{ borderColor: "rgba(49,54,40,0.2)" }}
-            >
-              Review again
-            </button>
+            {/* Review again only makes sense for user decks — system deck is SRS-gated */}
+            {activeSessionDeckId !== null && (
+              <button
+                onClick={() => startUserDeck(activeSessionDeckId)}
+                className="rounded-full border h-10 px-6 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
+                style={{ borderColor: "rgba(49,54,40,0.2)" }}
+              >
+                Review again
+              </button>
+            )}
             <button
               onClick={() => setView("decks")}
               className="rounded-full h-10 px-6 text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
