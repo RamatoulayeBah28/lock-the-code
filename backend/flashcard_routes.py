@@ -25,7 +25,7 @@ def get_flashcards(user=Depends(get_current_user), db=Depends(get_db)):
         f"JOIN patterns p ON f.pattern_id = p.id "
         f"WHERE (fp.next_review_at IS NULL OR fp.next_review_at <= now()) "
         f"AND {author_filter} "
-        f"ORDER BY fp.next_review_at ASC NULLS FIRST",
+        f"ORDER BY fp.next_review_at ASC NULLS FIRST, RANDOM()",
         params,
     )
     return cur.fetchall()
