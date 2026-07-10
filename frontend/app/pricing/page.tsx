@@ -13,6 +13,7 @@ const FREE_FEATURES = [
   "Topics & patterns tagging",
   "Edit & delete problems",
   "Calendar sync",
+  "Flashcard system decks",
 ];
 
 const PRO_FEATURES = [
@@ -20,6 +21,7 @@ const PRO_FEATURES = [
   "AI Tutor mode — Socratic hints while solving",
   "AI Interviewer mode — mock interview to practice any problem",
   "Unlimited flashcard decks",
+  "System design and behavioral interview (coming soon!)",
 ];
 
 const PLANS = [
@@ -127,28 +129,46 @@ export default function PricingPage() {
             </div>
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => { setTrialModal(false); checkout("monthly"); }}
+                onClick={() => {
+                  setTrialModal(false);
+                  checkout("monthly");
+                }}
                 disabled={loading !== null}
                 className="rounded-full font-medium text-sm h-10 px-6 cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
-                style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                style={{
+                  backgroundColor: "var(--foreground)",
+                  color: "var(--surface)",
+                }}
               >
-                {loading === "monthly" ? "Redirecting..." : "Get Monthly — $7.99/mo"}
+                {loading === "monthly"
+                  ? "Redirecting..."
+                  : "Get Monthly — $7.99/mo"}
               </button>
               <button
-                onClick={() => { setTrialModal(false); checkout("annual"); }}
+                onClick={() => {
+                  setTrialModal(false);
+                  checkout("annual");
+                }}
                 disabled={loading !== null}
                 className="rounded-full border font-medium text-sm h-10 px-6 cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50"
                 style={{ borderColor: "var(--foreground)", opacity: 0.8 }}
               >
-                {loading === "annual" ? "Redirecting..." : "Get Annual — $79/yr"}
+                {loading === "annual"
+                  ? "Redirecting..."
+                  : "Get Annual — $79/yr"}
               </button>
               <button
-                onClick={() => { setTrialModal(false); checkout("lifetime"); }}
+                onClick={() => {
+                  setTrialModal(false);
+                  checkout("lifetime");
+                }}
                 disabled={loading !== null}
                 className="rounded-full border font-medium text-sm h-10 px-6 cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50"
                 style={{ borderColor: "var(--foreground)", opacity: 0.7 }}
               >
-                {loading === "lifetime" ? "Redirecting..." : "Get Lifetime — $149"}
+                {loading === "lifetime"
+                  ? "Redirecting..."
+                  : "Get Lifetime — $149"}
               </button>
               <button
                 onClick={() => setTrialModal(false)}
@@ -177,11 +197,24 @@ export default function PricingPage() {
         {/* Free tier — full-width row */}
         <div className="rounded-xl border border-foreground/10 p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-6">
           <div className="flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-foreground/40 mb-1">Free — forever</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground/40 mb-1">
+              Free — forever
+            </p>
             <ul className="flex flex-wrap gap-x-6 gap-y-1 mt-2">
               {FREE_FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-foreground/70">
-                  <FontAwesomeIcon icon={faCheck} style={{ width: "0.75rem", height: "0.75rem", color: "var(--success)", flexShrink: 0 }} />
+                <li
+                  key={f}
+                  className="flex items-center gap-2 text-sm text-foreground/70"
+                >
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    style={{
+                      width: "0.75rem",
+                      height: "0.75rem",
+                      color: "var(--success)",
+                      flexShrink: 0,
+                    }}
+                  />
                   {f}
                 </li>
               ))}
