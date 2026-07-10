@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePostHog } from "posthog-js/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarDays } from "@fortawesome/free-regular-svg-icons";
+import Tooltip from "@/app/components/Tooltip";
 
 type Problem = {
   id: number;
@@ -16,12 +17,12 @@ type Problem = {
   patterns: string[];
 };
 
-const CONFIDENCE_LABELS: { label: string; value: number }[] = [
-  { label: "Forgot", value: 1 },
-  { label: "Weak", value: 2 },
-  { label: "Okay", value: 3 },
-  { label: "Good", value: 4 },
-  { label: "Mastered", value: 5 },
+const CONFIDENCE_LABELS: { label: string; value: number; tip: string }[] = [
+  { label: "Forgot", value: 1, tip: "Couldn't recall it — back tomorrow" },
+  { label: "Weak", value: 2, tip: "Partial recall — back in 2 days" },
+  { label: "Okay", value: 3, tip: "Got it but unsure — back in ~3 days" },
+  { label: "Good", value: 4, tip: "Solved with minor hesitation — ~1 week" },
+  { label: "Mastered", value: 5, tip: "Solved confidently — see you in a while!" },
 ];
 
 export default function ReviewPage() {
@@ -137,6 +138,7 @@ export default function ReviewPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
+      <Tooltip content="Click to expand details, notes, and a link to the problem" className="w-full">
       <button
         onClick={() => setExpanded((e) => !e)}
         className="w-full text-left rounded-xl border border-foreground/10 p-6 cursor-pointer hover:border-foreground/20 transition-colors"
@@ -174,19 +176,21 @@ export default function ReviewPage() {
           </div>
         )}
       </button>
+      </Tooltip>
 
       <div className="mt-6">
         <p className="text-sm font-medium mb-3">How did it go?</p>
         <div className="flex gap-2 flex-wrap">
-          {CONFIDENCE_LABELS.map(({ label, value }) => (
-            <button
-              key={value}
-              onClick={() => submitReview(value)}
-              disabled={submitting}
-              className="rounded-full border border-foreground/20 px-5 h-10 text-sm font-medium cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {label}
-            </button>
+          {CONFIDENCE_LABELS.map(({ label, value, tip }) => (
+            <Tooltip key={value} content={tip} position="top">
+              <button
+                onClick={() => submitReview(value)}
+                disabled={submitting}
+                className="rounded-full border border-foreground/20 px-5 h-10 text-sm font-medium cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {label}
+              </button>
+            </Tooltip>
           ))}
         </div>
       </div>

@@ -14,6 +14,7 @@ import {
   faXmark,
   faArrowUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
+import Tooltip from "@/app/components/Tooltip";
 
 function UpgradeBanner() {
   const searchParams = useSearchParams();
@@ -222,32 +223,29 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* Calendar sync */}
-          <div className="relative group">
+          <Tooltip content="Sync your review schedule to Google Calendar">
             <button onClick={() => handleCalendarSync("google")} disabled={!calendarIcsUrl}
               className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
               aria-label="Sync to Google Calendar">
               <Image src="/google-cal-icon.png" alt="Google Calendar" width={28} height={28} />
             </button>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Sync to Google Calendar
-            </span>
-          </div>
-          <div className="relative group">
+          </Tooltip>
+          <Tooltip content="Apple Calendar — coming soon">
             <button disabled className="flex items-center justify-center opacity-30 cursor-not-allowed" aria-label="Apple Calendar coming soon">
               <Image src="/apple-cal-icon.png" alt="Apple Calendar" width={28} height={28} />
             </button>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-foreground text-surface rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Apple Calendar — coming soon
-            </span>
-          </div>
-          <button
-            onClick={openAddForm}
-            className="flex items-center gap-1.5 rounded-full h-9 px-4 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
-          >
-            <FontAwesomeIcon icon={faPlus} style={{ width: "0.7rem", height: "0.7rem" }} />
-            Add problem
-          </button>
+          </Tooltip>
+          <Tooltip content="Track a new problem — it'll be scheduled for spaced repetition review">
+            <button
+              data-tour="add-problem"
+              onClick={openAddForm}
+              className="flex items-center gap-1.5 rounded-full h-9 px-4 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+            >
+              <FontAwesomeIcon icon={faPlus} style={{ width: "0.7rem", height: "0.7rem" }} />
+              Add problem
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -360,21 +358,25 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => openEditForm(p)}
-                    className="cursor-pointer hover:opacity-70 transition-opacity"
-                    style={{ color: "var(--foreground)", opacity: 0.3 }}
-                  >
-                    <FontAwesomeIcon icon={faPen} style={{ width: "0.8rem", height: "0.8rem" }} />
-                  </button>
-                  <button
-                    onClick={() => deleteProblem(p.id)}
-                    disabled={deletingId === p.id}
-                    className="cursor-pointer hover:opacity-70 transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
-                    style={{ color: "#a20021" }}
-                  >
-                    <FontAwesomeIcon icon={faTrash} style={{ width: "0.8rem", height: "0.8rem" }} />
-                  </button>
+                  <Tooltip content="Edit problem details">
+                    <button
+                      onClick={() => openEditForm(p)}
+                      className="cursor-pointer hover:opacity-70 transition-opacity"
+                      style={{ color: "var(--foreground)", opacity: 0.3 }}
+                    >
+                      <FontAwesomeIcon icon={faPen} style={{ width: "0.8rem", height: "0.8rem" }} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Remove from your library">
+                    <button
+                      onClick={() => deleteProblem(p.id)}
+                      disabled={deletingId === p.id}
+                      className="cursor-pointer hover:opacity-70 transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
+                      style={{ color: "#a20021" }}
+                    >
+                      <FontAwesomeIcon icon={faTrash} style={{ width: "0.8rem", height: "0.8rem" }} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </li>

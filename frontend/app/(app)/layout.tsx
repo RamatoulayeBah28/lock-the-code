@@ -4,6 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import PaywallModal from "@/app/components/PaywallModal";
+import Tooltip from "@/app/components/Tooltip";
+import { WalktourProvider } from "@/app/components/Walktour";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendarCheck,
@@ -21,18 +23,21 @@ const FREE_ITEMS: {
   label: string;
   shortLabel: string;
   icon: IconDefinition;
+  tip: string;
 }[] = [
   {
     href: "/review",
     label: "Review Queue",
     shortLabel: "Review",
     icon: faCalendarCheck,
+    tip: "Your daily spaced repetition review — one problem at a time",
   },
   {
     href: "/dashboard",
     label: "My Problems",
     shortLabel: "Problems",
     icon: faList,
+    tip: "Browse, add, and manage your full problem library",
   },
 ];
 
@@ -42,6 +47,7 @@ const PRO_ITEMS: {
   shortLabel: string;
   icon: IconDefinition;
   requiresPro: boolean;
+  tip: string;
 }[] = [
   {
     href: "/chat/tutor",
@@ -49,6 +55,7 @@ const PRO_ITEMS: {
     shortLabel: "Tutor",
     icon: faRobot,
     requiresPro: true,
+    tip: "Socratic hints that guide your thinking without giving away the answer — Pro",
   },
   {
     href: "/chat/interview",
@@ -56,6 +63,7 @@ const PRO_ITEMS: {
     shortLabel: "Interview",
     icon: faMicrophone,
     requiresPro: true,
+    tip: "Realistic mock interview with a timer, code editor, and structured feedback — Pro",
   },
   {
     href: "/flashcards",
@@ -63,6 +71,7 @@ const PRO_ITEMS: {
     shortLabel: "Flashcards",
     icon: faLayerGroup,
     requiresPro: false,
+    tip: "Spaced repetition flashcard decks for algorithm patterns",
   },
 ];
 
@@ -121,6 +130,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <WalktourProvider isPro={proStatus?.is_pro ?? false}>
     <div
       className={`flex overflow-hidden ${isChatPage ? "h-[calc(100dvh-4rem)]" : "flex-1"}`}
     >
@@ -135,30 +145,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           Practice
         </p>
-        {FREE_ITEMS.map(({ href, label, icon }) => {
+        {FREE_ITEMS.map(({ href, label, icon, tip }) => {
           const active = pathname === href;
           return (
-            <button
-              key={href}
-              onClick={() => safeNavigate(href)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
-              style={{
-                backgroundColor: active
-                  ? "rgba(86,135,109,0.25)"
-                  : "transparent",
-                color: active ? "var(--success)" : "rgba(255,255,255,0.75)",
-              }}
-            >
-              <FontAwesomeIcon
-                icon={icon}
+            <Tooltip key={href} content={tip} position="right" className="w-full">
+              <button
+                onClick={() => safeNavigate(href)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
                 style={{
-                  color: "var(--success)",
-                  width: "1rem",
-                  height: "1rem",
+                  backgroundColor: active
+                    ? "rgba(86,135,109,0.25)"
+                    : "transparent",
+                  color: active ? "var(--success)" : "rgba(255,255,255,0.75)",
                 }}
-              />
-              {label}
-            </button>
+              >
+                <FontAwesomeIcon
+                  icon={icon}
+                  style={{
+                    color: "var(--success)",
+                    width: "1rem",
+                    height: "1rem",
+                  }}
+                />
+                {label}
+              </button>
+            </Tooltip>
           );
         })}
 
@@ -173,30 +184,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           Lock In
         </p>
-        {PRO_ITEMS.map(({ href, label, icon, requiresPro }) => {
+        {PRO_ITEMS.map(({ href, label, icon, requiresPro, tip }) => {
           const active = pathname === href;
           return (
-            <button
-              key={href}
-              onClick={() => requiresPro ? handleProClick(href, label) : safeNavigate(href)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
-              style={{
-                backgroundColor: active
-                  ? "rgba(252,185,125,0.2)"
-                  : "transparent",
-                color: active ? "var(--accent)" : "rgba(255,255,255,0.75)",
-              }}
-            >
-              <FontAwesomeIcon
-                icon={icon}
+            <Tooltip key={href} content={tip} position="right" className="w-full">
+              <button
+                onClick={() => requiresPro ? handleProClick(href, label) : safeNavigate(href)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
                 style={{
-                  color: "var(--accent)",
-                  width: "1rem",
-                  height: "1rem",
+                  backgroundColor: active
+                    ? "rgba(252,185,125,0.2)"
+                    : "transparent",
+                  color: active ? "var(--accent)" : "rgba(255,255,255,0.75)",
                 }}
-              />
-              {label}
-            </button>
+              >
+                <FontAwesomeIcon
+                  icon={icon}
+                  style={{
+                    color: "var(--accent)",
+                    width: "1rem",
+                    height: "1rem",
+                  }}
+                />
+                {label}
+              </button>
+            </Tooltip>
           );
         })}
       </nav>
@@ -313,5 +325,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+    </WalktourProvider>
   );
 }

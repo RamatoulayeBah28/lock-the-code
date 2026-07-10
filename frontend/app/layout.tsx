@@ -56,7 +56,9 @@ export default function RootLayout({
               </Show>
               <Show when="signed-in">
                 <HeaderProButton />
-                <UserButtonWithSettings />
+                <span data-tour="profile">
+                  <UserButtonWithSettings />
+                </span>
               </Show>
             </div>
           </header>

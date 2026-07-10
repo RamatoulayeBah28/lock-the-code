@@ -16,6 +16,7 @@ import {
   faEllipsisVertical,
 } from "@fortawesome/free-solid-svg-icons";
 import PaywallModal from "@/app/components/PaywallModal";
+import Tooltip from "@/app/components/Tooltip";
 
 type Flashcard = { id?: number; front: string; back: string; pattern?: string };
 type DeckCard = { id: number; front: string; back: string; pattern_id: number | null };
@@ -369,6 +370,7 @@ export default function FlashcardsPage() {
         <div className="flex flex-wrap gap-4">
           {/* System deck — hidden when search doesn't match */}
           {systemDeckVisible && (
+          <Tooltip content="Free for all users. Cards that need more work surface more often.">
           <button
             onClick={startDeck}
             className="rounded-2xl border p-5 flex flex-col gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer"
@@ -382,6 +384,7 @@ export default function FlashcardsPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.45 }}>22 cards</p>
             </div>
           </button>
+          </Tooltip>
           )}
 
           {/* User decks */}
@@ -954,31 +957,35 @@ export default function FlashcardsPage() {
           {/* ✓ / ✗ buttons — only after flip */}
           {flipped && (
             <div className="flex justify-center gap-6 pt-2">
-              <button
-                onClick={() => submitReview(false)}
-                disabled={submitting}
-                className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40 border-2"
-                style={{
-                  borderColor: "#a20021",
-                  backgroundColor: "rgba(162,0,33,0.05)",
-                }}
-              >
-                <FontAwesomeIcon
-                  icon={faXmark}
-                  style={{ width: "1.5rem", height: "1.5rem", color: "#a20021" }}
-                />
-              </button>
-              <button
-                onClick={() => submitReview(true)}
-                disabled={submitting}
-                className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40"
-                style={{ backgroundColor: "var(--success)" }}
-              >
-                <FontAwesomeIcon
-                  icon={faCheck}
-                  style={{ width: "1.5rem", height: "1.5rem", color: "white" }}
-                />
-              </button>
+              <Tooltip content="Missed it — this card will come back sooner" position="bottom">
+                <button
+                  onClick={() => submitReview(false)}
+                  disabled={submitting}
+                  className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40 border-2"
+                  style={{
+                    borderColor: "#a20021",
+                    backgroundColor: "rgba(162,0,33,0.05)",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faXmark}
+                    style={{ width: "1.5rem", height: "1.5rem", color: "#a20021" }}
+                  />
+                </button>
+              </Tooltip>
+              <Tooltip content="Got it — this card will be shown less often" position="bottom">
+                <button
+                  onClick={() => submitReview(true)}
+                  disabled={submitting}
+                  className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40"
+                  style={{ backgroundColor: "var(--success)" }}
+                >
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    style={{ width: "1.5rem", height: "1.5rem", color: "white" }}
+                  />
+                </button>
+              </Tooltip>
             </div>
           )}
         </>
