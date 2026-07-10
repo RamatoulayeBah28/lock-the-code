@@ -52,14 +52,12 @@ const TOUR_STEPS: TourStep[] = [
     body: "You've just seen problem tracking, spaced repetition review, and pattern flashcards, all free. Now let's see what Pro unlocks...",
     ctaLabel: "Explore Pro →",
     proNavigateTo: "/chat/tutor",
-    navigateTo: "/pricing",
   },
   {
-    title: "AI Tutor (Pro)",
+    title: "AI Tutor (Pro) 🤖",
     body: "Stuck on a problem? Ask your AI tutor — whether it's on your list or any LeetCode question. It gives Socratic hints that guide your thinking without handing you the answer.",
     ctaLabel: "Meet the Interviewer →",
     proNavigateTo: "/chat/interview",
-    navigateTo: "/pricing",
   },
   {
     title: "AI Interviewer (Pro)",
