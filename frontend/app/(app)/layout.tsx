@@ -87,6 +87,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    if (isLoaded && !isSignedIn) router.replace("/");
+  }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
     if (!leaveConfirmHref) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setLeaveConfirmHref(null);
