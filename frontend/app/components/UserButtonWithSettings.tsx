@@ -25,7 +25,7 @@ const CreditCardIcon = () => (
 
 export default function UserButtonWithSettings() {
   return (
-    <UserButton>
+    <UserButton afterSignOutUrl="/">
       <UserButton.UserProfilePage
         label="Notifications"
         url="notifications"
