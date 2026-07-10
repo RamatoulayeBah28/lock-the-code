@@ -86,10 +86,15 @@ export function WalktourProvider({
   children: React.ReactNode;
   isPro?: boolean;
 }) {
-  const [step, setStep] = useState<number>(() => {
-    if (typeof window === "undefined") return -1;
-    return localStorage.getItem("ltc_tour_done") ? -1 : 0;
-  });
+  const [step, setStep] = useState<number>(-1);
+
+  useEffect(() => {
+    // Runs only on the client after hydration — avoids SSR mismatch
+    const timer = setTimeout(() => {
+      if (!localStorage.getItem("ltc_tour_done")) setStep(0);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const router = useRouter();
 
