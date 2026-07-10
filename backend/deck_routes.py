@@ -29,7 +29,7 @@ def get_patterns(db=Depends(get_db)):
 @router.get("/decks")
 def get_decks(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT d.id, d.title, d.author_id, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title", (user["id"],))
+    cur.execute("SELECT d.id, d.title, d.author_id, d.created_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title, d.created_at ORDER BY d.created_at DESC", (user["id"],))
     return cur.fetchall()
 
 @router.delete("/decks/{deck_id}")
@@ -50,7 +50,7 @@ def update_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=
     
     db.commit()
 
-    cur.execute("SELECT d.id, d.title, d.author_id, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s AND d.id = %s GROUP BY d.id, d.title", (user["id"], deck_id))
+    cur.execute("SELECT d.id, d.title, d.author_id, d.created_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s AND d.id = %s GROUP BY d.id, d.title, d.created_at", (user["id"], deck_id))
 
     return cur.fetchone()
 

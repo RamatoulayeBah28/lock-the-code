@@ -39,7 +39,7 @@ export default function FlashcardsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [patterns, setPatterns] = useState<{ id: number; pattern: string }[]>([]);
-  const [userDecks, setUserDecks] = useState<{ id: number; title: string; card_count: number }[]>([]);
+  const [userDecks, setUserDecks] = useState<{ id: number; title: string; card_count: number; created_at: string }[]>([]);
   const [decksLoading, setDecksLoading] = useState(true);
   const [deckSearch, setDeckSearch] = useState("");
   const [deckFilter, setDeckFilter] = useState<"recent" | "created" | "studied">("recent");
@@ -308,7 +308,14 @@ export default function FlashcardsPage() {
 
   const q = deckSearch.toLowerCase();
   const systemDeckVisible = !q || "interview patterns".includes(q);
-  const filteredDecks = userDecks.filter((d) => d.title.toLowerCase().includes(q));
+  const filteredDecks = userDecks
+    .filter((d) => d.title.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (deckFilter === "created") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (deckFilter === "studied") return b.card_count - a.card_count;
+      // "recent" — newest first (default from backend ORDER BY created_at DESC)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   const noResults = q && !systemDeckVisible && filteredDecks.length === 0;
 
   // ── DECKS VIEW ────────────────────────────────────────────────────────────
