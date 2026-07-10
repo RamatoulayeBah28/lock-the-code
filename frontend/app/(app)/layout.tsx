@@ -48,6 +48,7 @@ const PRO_ITEMS: {
   icon: IconDefinition;
   requiresPro: boolean;
   tip: string;
+  tourId?: string;
 }[] = [
   {
     href: "/chat/tutor",
@@ -56,6 +57,7 @@ const PRO_ITEMS: {
     icon: faRobot,
     requiresPro: true,
     tip: "Socratic hints that guide your thinking without giving away the answer — Pro",
+    tourId: "ai-tutor",
   },
   {
     href: "/chat/interview",
@@ -64,6 +66,7 @@ const PRO_ITEMS: {
     icon: faMicrophone,
     requiresPro: true,
     tip: "Realistic mock interview with a timer, code editor, and structured feedback — Pro",
+    tourId: "ai-interview",
   },
   {
     href: "/flashcards",
@@ -184,11 +187,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           Lock In
         </p>
-        {PRO_ITEMS.map(({ href, label, icon, requiresPro, tip }) => {
+        {PRO_ITEMS.map(({ href, label, icon, requiresPro, tip, tourId }) => {
           const active = pathname === href;
           return (
             <Tooltip key={href} content={tip} position="right" className="w-full">
               <button
+                data-tour={tourId}
                 onClick={() => requiresPro ? handleProClick(href, label) : safeNavigate(href)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
                 style={{

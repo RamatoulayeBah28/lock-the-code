@@ -54,14 +54,16 @@ const TOUR_STEPS: TourStep[] = [
     proNavigateTo: "/chat/tutor",
   },
   {
-    title: "AI Tutor (Pro) 🤖",
+    title: "AI Tutor (Pro)",
     body: "Stuck on a problem? Ask your AI tutor — whether it's on your list or any LeetCode question. It gives Socratic hints that guide your thinking without handing you the answer.",
+    targetSelector: "[data-tour='ai-tutor']",
     ctaLabel: "Meet the Interviewer →",
     proNavigateTo: "/chat/interview",
   },
   {
     title: "AI Interviewer (Pro)",
     body: "Run a live mock interview session. Choose your target company, seniority level, and question type — technical, behavioral, or system design. Just like the real thing.",
+    targetSelector: "[data-tour='ai-interview']",
   },
   {
     title: "Need Help?",
@@ -101,7 +103,10 @@ export function WalktourProvider({
         return;
       }
       const el = document.querySelector(selector);
-      setTargetRect(el ? el.getBoundingClientRect() : null);
+      if (!el) { setTargetRect(null); return; }
+      const rect = el.getBoundingClientRect();
+      // Element hidden (e.g. sidebar on mobile) — fall back to centered popup
+      setTargetRect(rect.width > 0 && rect.height > 0 ? rect : null);
     };
 
     // If the target is already in the DOM (no navigation pending), measure next tick.
