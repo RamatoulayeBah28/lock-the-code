@@ -250,6 +250,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
         "FROM problems p "
         "JOIN users u ON p.user_id = u.id "
         "WHERE p.next_review_at::date <= CURRENT_DATE "
+        "AND (p.last_practiced IS NULL OR p.last_practiced::date < CURRENT_DATE) "
         "AND u.email_notifications_enabled = TRUE "
         "AND u.email_notification_hour = EXTRACT(HOUR FROM now() AT TIME ZONE COALESCE(u.timezone, 'UTC'))::int "
         "GROUP BY p.user_id"
