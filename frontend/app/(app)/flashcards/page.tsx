@@ -39,10 +39,10 @@ export default function FlashcardsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [patterns, setPatterns] = useState<{ id: number; pattern: string }[]>([]);
-  const [userDecks, setUserDecks] = useState<{ id: number; title: string; card_count: number; created_at: string }[]>([]);
+  const [userDecks, setUserDecks] = useState<{ id: number; title: string; card_count: number; created_at: string; last_studied_at: string | null }[]>([]);
   const [decksLoading, setDecksLoading] = useState(true);
   const [deckSearch, setDeckSearch] = useState("");
-  const [deckFilter, setDeckFilter] = useState<"recent" | "created" | "studied">("recent");
+  const [deckFilter, setDeckFilter] = useState<"recent" | "created">("recent");
   const [deckMenu, setDeckMenu] = useState<number | null>(null);
   const [editingDeck, setEditingDeck] = useState<{ id: number; title: string } | null>(null);
   const [editDeckId, setEditDeckId] = useState<number | null>(null);
@@ -179,9 +179,12 @@ export default function FlashcardsPage() {
     setIsFreePreview(false);
     try {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${deckId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [res] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${deckId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks/${deckId}/study`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const now = new Date().toISOString();
+      setUserDecks((prev) => prev.map((d) => d.id === deckId ? { ...d, last_studied_at: now } : d));
       if (!res.ok) { setSessionStatus("done"); return; }
       const data = await res.json();
       if (data.length === 0) { setSessionStatus("done"); return; }
@@ -311,10 +314,11 @@ export default function FlashcardsPage() {
   const filteredDecks = userDecks
     .filter((d) => d.title.toLowerCase().includes(q))
     .sort((a, b) => {
-      if (deckFilter === "created") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      if (deckFilter === "studied") return b.card_count - a.card_count;
-      // "recent" — newest first (default from backend ORDER BY created_at DESC)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (deckFilter === "created") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      // "recent" — last studied, falling back to created_at for never-studied decks
+      const aTime = a.last_studied_at ? new Date(a.last_studied_at).getTime() : new Date(a.created_at).getTime();
+      const bTime = b.last_studied_at ? new Date(b.last_studied_at).getTime() : new Date(b.created_at).getTime();
+      return bTime - aTime;
     });
   const noResults = q && !systemDeckVisible && filteredDecks.length === 0;
 
@@ -342,7 +346,6 @@ export default function FlashcardsPage() {
         >
           <option value="recent">Recent</option>
           <option value="created">Created</option>
-          <option value="studied">Studied</option>
         </select>
         <div className="flex items-center gap-2 flex-1 min-w-[160px] rounded-full border px-3 py-1.5"
           style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--surface)" }}>
@@ -900,7 +903,7 @@ export default function FlashcardsPage() {
                   className="text-base leading-relaxed flex-1"
                   style={{ color: "var(--foreground)" }}
                 >
-                  {card.front}
+                  {card.front.includes(" — ") ? card.front.split(" — ").slice(1).join(" — ") : card.front}
                 </p>
                 <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.3 }}>
                   Tap or press space to reveal

@@ -1,0 +1,1 @@
+ALTER TABLE decks ADD COLUMN last_studied_at TIMESTAMPTZ NULL;

@@ -29,7 +29,7 @@ def get_patterns(db=Depends(get_db)):
 @router.get("/decks")
 def get_decks(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT d.id, d.title, d.author_id, d.created_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title, d.created_at ORDER BY d.created_at DESC", (user["id"],))
+    cur.execute("SELECT d.id, d.title, d.author_id, d.created_at, d.last_studied_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title, d.created_at, d.last_studied_at ORDER BY d.created_at DESC", (user["id"],))
     return cur.fetchall()
 
 @router.delete("/decks/{deck_id}")
@@ -59,6 +59,15 @@ def get_deck_flashcards(deck_id: int, user=Depends(get_current_user), db=Depends
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT id, front, back, pattern_id, deck_id FROM flashcards WHERE deck_id = %s AND author_id = %s", (deck_id, user["id"]))
     return cur.fetchall()
+
+@router.post("/decks/{deck_id}/study")
+def mark_deck_studied(deck_id: int, user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("UPDATE decks SET last_studied_at = now() WHERE id = %s AND author_id = %s", (deck_id, user["id"]))
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    db.commit()
+    return {}
 
 @router.post("/decks/{deck_id}/cards")
 def add_card_to_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=Depends(get_db)):

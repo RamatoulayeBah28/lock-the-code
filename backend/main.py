@@ -14,6 +14,7 @@ from stripe_routes import router as stripe_router
 from chat_routes import router as chat_router
 from flashcard_routes import router as flashcard_router
 from deck_routes import router as deck_router
+from clerk_routes import router as clerk_router
 from psycopg2.extras import RealDictCursor
 
 app = FastAPI()
@@ -34,6 +35,7 @@ app.include_router(stripe_router)
 app.include_router(chat_router)
 app.include_router(flashcard_router)
 app.include_router(deck_router)
+app.include_router(clerk_router)
 
 @app.get("/me")
 def get_me(user=Depends(get_current_user), db=Depends(get_db)):
