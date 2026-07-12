@@ -513,7 +513,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || !title || !difficulty}
+                disabled={submitting || !title || !difficulty || selectedTopics.length === 0 || selectedPatterns.length === 0}
                 className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40"
                 style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
               >
