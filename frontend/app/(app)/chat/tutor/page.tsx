@@ -50,6 +50,14 @@ export default function TutorPage() {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, [input]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -356,20 +364,27 @@ export default function TutorPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-foreground/10 px-4 py-3 flex gap-2 shrink-0">
-        <input
-          type="text"
+      <div className="border-t border-foreground/10 px-4 py-3 flex gap-2 shrink-0 items-end">
+        <textarea
+          ref={inputRef}
+          rows={1}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSend();
+              if (inputRef.current) inputRef.current.style.height = "auto";
             }
           }}
           placeholder="Type your message..."
           disabled={streaming}
-          className="flex-1 rounded-full border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          className="flex-1 rounded-2xl border border-foreground/20 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 resize-none overflow-hidden"
+          style={{ maxHeight: "120px" }}
         />
         <button
           onClick={handleSend}
