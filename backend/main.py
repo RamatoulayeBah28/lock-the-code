@@ -324,7 +324,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
         resend.Emails.send({
             "from": "Lock The Code <contact@lockthecode.net>",
             "to": [email],
-            "subject": "You have 1 problem due today 🔒",
+            "subject": "You have 1 problem due today",
             "html": html,
         })
 
