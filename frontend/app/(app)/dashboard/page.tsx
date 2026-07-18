@@ -22,7 +22,10 @@ function UpgradeBanner() {
   return (
     <div
       className="mb-6 rounded-xl px-4 py-3 text-sm font-medium"
-      style={{ backgroundColor: "rgba(49,54,40,0.08)", color: "var(--foreground)" }}
+      style={{
+        backgroundColor: "rgba(49,54,40,0.08)",
+        color: "var(--foreground)",
+      }}
     >
       Welcome to Lock The Code Pro ❤︎
     </div>
@@ -60,10 +63,18 @@ export default function DashboardPage() {
   const [url, setUrl] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<number[]>([]);
   const [selectedPatterns, setSelectedPatterns] = useState<number[]>([]);
-  const [allTopics, setAllTopics] = useState<{ id: number; topic: string }[]>([]);
-  const [allPatterns, setAllPatterns] = useState<{ id: number; pattern: string }[]>([]);
+  const [allTopics, setAllTopics] = useState<{ id: number; topic: string }[]>(
+    [],
+  );
+  const [allPatterns, setAllPatterns] = useState<
+    { id: number; pattern: string }[]
+  >([]);
+  const [topicSearch, setTopicSearch] = useState("");
+  const [patternSearch, setPatternSearch] = useState("");
   const [search, setSearch] = useState("");
-  const [diffFilter, setDiffFilter] = useState<"" | "easy" | "medium" | "hard">("");
+  const [diffFilter, setDiffFilter] = useState<"" | "easy" | "medium" | "hard">(
+    "",
+  );
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -71,18 +82,31 @@ export default function DashboardPage() {
     async function loadAll() {
       const token = await getToken();
       const [problemsRes, topicsRes, patternsRes, calRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/calendar/token`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/calendar/token`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
-      if (!problemsRes.ok) { setError(`Request failed: ${problemsRes.status}`); return; }
+      if (!problemsRes.ok) {
+        setError(`Request failed: ${problemsRes.status}`);
+        return;
+      }
       setProblems(await problemsRes.json());
       if (topicsRes.ok) setAllTopics(await topicsRes.json());
       if (patternsRes.ok) setAllPatterns(await patternsRes.json());
       if (calRes.ok) {
         const { token: calToken, user_id } = await calRes.json();
-        setCalendarIcsUrl(`${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`);
+        setCalendarIcsUrl(
+          `${process.env.NEXT_PUBLIC_API_URL}/calendar/${user_id}/${calToken}.ics`,
+        );
       }
     }
     loadAll().catch((err) => setError(String(err)));
@@ -92,7 +116,10 @@ export default function DashboardPage() {
     if (!calendarIcsUrl) return;
     const webcalUrl = calendarIcsUrl.replace(/^https?:\/\//, "webcal://");
     if (type === "google") {
-      window.open(`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`, "_blank");
+      window.open(
+        `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`,
+        "_blank",
+      );
     } else {
       const a = document.createElement("a");
       a.href = webcalUrl;
@@ -104,28 +131,53 @@ export default function DashboardPage() {
 
   function openAddForm() {
     setEditingProblem(null);
-    setTitle(""); setDifficulty(""); setNote(""); setUrl("");
-    setSelectedTopics([]); setSelectedPatterns([]);
+    setTitle("");
+    setDifficulty("");
+    setNote("");
+    setUrl("");
+    setSelectedTopics([]);
+    setSelectedPatterns([]);
+    setTopicSearch("");
+    setPatternSearch("");
     setShowForm(true);
   }
 
   function openEditForm(p: Problem) {
     setEditingProblem(p);
-    setTitle(p.title); setDifficulty(p.difficulty);
-    setNote(p.note ?? ""); setUrl(p.url ?? "");
-    setSelectedTopics(p.topics.flatMap((name) => { const m = allTopics.find((t) => t.topic === name); return m ? [m.id] : []; }));
-    setSelectedPatterns(p.patterns.flatMap((name) => { const m = allPatterns.find((t) => t.pattern === name); return m ? [m.id] : []; }));
+    setTitle(p.title);
+    setDifficulty(p.difficulty);
+    setNote(p.note ?? "");
+    setUrl(p.url ?? "");
+    setSelectedTopics(
+      p.topics.flatMap((name) => {
+        const m = allTopics.find((t) => t.topic === name);
+        return m ? [m.id] : [];
+      }),
+    );
+    setSelectedPatterns(
+      p.patterns.flatMap((name) => {
+        const m = allPatterns.find((t) => t.pattern === name);
+        return m ? [m.id] : [];
+      }),
+    );
     setShowForm(true);
   }
 
-  function closeForm() { setShowForm(false); setEditingProblem(null); }
+  function closeForm() {
+    setShowForm(false);
+    setEditingProblem(null);
+  }
 
   function toggleTopic(id: number) {
-    setSelectedTopics((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setSelectedTopics((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   function togglePattern(id: number) {
-    setSelectedPatterns((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setSelectedPatterns((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   async function handleSubmit(e: React.SyntheticEvent) {
@@ -133,27 +185,57 @@ export default function DashboardPage() {
     if (submitting) return;
     setSubmitting(true);
     const token = await getToken();
-    const body = { title, difficulty, note: note || null, url: url || null, topic_ids: selectedTopics, pattern_ids: selectedPatterns };
+    const body = {
+      title,
+      difficulty,
+      note: note || null,
+      url: url || null,
+      topic_ids: selectedTopics,
+      pattern_ids: selectedPatterns,
+    };
     try {
       if (editingProblem) {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${editingProblem.id}`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/problems/${editingProblem.id}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          },
+        );
+        if (!res.ok) {
+          setError(`Request failed: ${res.status}`);
+          return;
+        }
         const updated = await res.json();
-        setProblems((problems ?? []).map((p) => (p.id === editingProblem.id ? updated : p)));
+        setProblems(
+          (problems ?? []).map((p) =>
+            p.id === editingProblem.id ? updated : p,
+          ),
+        );
       } else {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(body),
         });
-        if (!res.ok) { setError(`Request failed: ${res.status}`); return; }
+        if (!res.ok) {
+          setError(`Request failed: ${res.status}`);
+          return;
+        }
         const created = await res.json();
         setProblems([...(problems ?? []), created]);
-        ph?.capture("problem_added", { difficulty, topics: selectedTopics.length, patterns: selectedPatterns.length });
+        ph?.capture("problem_added", {
+          difficulty,
+          topics: selectedTopics.length,
+          patterns: selectedPatterns.length,
+        });
       }
       closeForm();
     } finally {
@@ -164,11 +246,18 @@ export default function DashboardPage() {
   async function deleteProblem(id: number) {
     setDeletingId(id);
     const token = await getToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) { setError(`Request failed: ${res.status}`); setDeletingId(null); return; }
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/problems/${id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (!res.ok) {
+      setError(`Request failed: ${res.status}`);
+      setDeletingId(null);
+      return;
+    }
     setProblems((problems ?? []).filter((p) => p.id !== id));
     setDeletingId(null);
   }
@@ -176,31 +265,43 @@ export default function DashboardPage() {
   const q = search.toLowerCase();
   const filtered = (problems ?? []).filter((p) => {
     if (diffFilter && p.difficulty !== diffFilter) return false;
-    if (q && !p.title.toLowerCase().includes(q) &&
-        !p.topics.some((t) => t.toLowerCase().includes(q)) &&
-        !p.patterns.some((pt) => pt.toLowerCase().includes(q))) return false;
+    if (
+      q &&
+      !p.title.toLowerCase().includes(q) &&
+      !p.topics.some((t) => t.toLowerCase().includes(q)) &&
+      !p.patterns.some((pt) => pt.toLowerCase().includes(q))
+    )
+      return false;
     return true;
   });
 
   if (error) return <p className="p-8 text-red-600">{error}</p>;
 
-  if (problems === null) return (
-    <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
-      <div className="flex items-center justify-between mb-6">
-        <div className="h-7 w-36 rounded bg-foreground/10 animate-pulse" />
-        <div className="h-9 w-32 rounded-full bg-foreground/10 animate-pulse" />
-      </div>
-      <div className="h-10 w-full rounded-full bg-foreground/10 animate-pulse mb-4" />
-      <div className="flex flex-col gap-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-xl border p-4 animate-pulse" style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)" }}>
-            <div className="h-5 w-3/4 rounded bg-foreground/10 mb-2" />
-            <div className="h-4 w-1/3 rounded bg-foreground/10" />
-          </div>
-        ))}
-      </div>
-    </main>
-  );
+  if (problems === null)
+    return (
+      <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-7 w-36 rounded bg-foreground/10 animate-pulse" />
+          <div className="h-9 w-32 rounded-full bg-foreground/10 animate-pulse" />
+        </div>
+        <div className="h-10 w-full rounded-full bg-foreground/10 animate-pulse mb-4" />
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-xl border p-4 animate-pulse"
+              style={{
+                borderColor: "rgba(49,54,40,0.1)",
+                backgroundColor: "var(--surface)",
+              }}
+            >
+              <div className="h-5 w-3/4 rounded bg-foreground/10 mb-2" />
+              <div className="h-4 w-1/3 rounded bg-foreground/10" />
+            </div>
+          ))}
+        </div>
+      </main>
+    );
 
   return (
     <main className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
@@ -215,7 +316,11 @@ export default function DashboardPage() {
           {problems.length > 0 && (
             <span
               className="text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "rgba(49,54,40,0.08)", color: "var(--foreground)", opacity: 0.6 }}
+              style={{
+                backgroundColor: "rgba(49,54,40,0.08)",
+                color: "var(--foreground)",
+                opacity: 0.6,
+              }}
             >
               {problems.length}
             </span>
@@ -224,15 +329,32 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           {/* Calendar sync */}
           <Tooltip content="Sync your review schedule to Google Calendar">
-            <button onClick={() => handleCalendarSync("google")} disabled={!calendarIcsUrl}
+            <button
+              onClick={() => handleCalendarSync("google")}
+              disabled={!calendarIcsUrl}
               className="flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
-              aria-label="Sync to Google Calendar">
-              <Image src="/google-cal-icon.png" alt="Google Calendar" width={28} height={28} />
+              aria-label="Sync to Google Calendar"
+            >
+              <Image
+                src="/google-cal-icon.png"
+                alt="Google Calendar"
+                width={28}
+                height={28}
+              />
             </button>
           </Tooltip>
           <Tooltip content="Apple Calendar — coming soon">
-            <button disabled className="flex items-center justify-center opacity-30 cursor-not-allowed" aria-label="Apple Calendar coming soon">
-              <Image src="/apple-cal-icon.png" alt="Apple Calendar" width={28} height={28} />
+            <button
+              disabled
+              className="flex items-center justify-center opacity-30 cursor-not-allowed"
+              aria-label="Apple Calendar coming soon"
+            >
+              <Image
+                src="/apple-cal-icon.png"
+                alt="Apple Calendar"
+                width={28}
+                height={28}
+              />
             </button>
           </Tooltip>
           <Tooltip content="Track a new problem — it'll be scheduled for spaced repetition review">
@@ -240,9 +362,15 @@ export default function DashboardPage() {
               data-tour="add-problem"
               onClick={openAddForm}
               className="flex items-center gap-1.5 rounded-full h-9 px-4 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+              style={{
+                backgroundColor: "var(--foreground)",
+                color: "var(--surface)",
+              }}
             >
-              <FontAwesomeIcon icon={faPlus} style={{ width: "0.7rem", height: "0.7rem" }} />
+              <FontAwesomeIcon
+                icon={faPlus}
+                style={{ width: "0.7rem", height: "0.7rem" }}
+              />
               Add problem
             </button>
           </Tooltip>
@@ -252,9 +380,22 @@ export default function DashboardPage() {
       {/* Search + difficulty filter */}
       {problems.length > 0 && (
         <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-[160px] rounded-full border px-3 py-2"
-            style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--surface)" }}>
-            <FontAwesomeIcon icon={faMagnifyingGlass} style={{ width: "0.75rem", height: "0.75rem", color: "var(--foreground)", opacity: 0.35 }} />
+          <div
+            className="flex items-center gap-2 flex-1 min-w-[160px] rounded-full border px-3 py-2"
+            style={{
+              borderColor: "rgba(49,54,40,0.15)",
+              backgroundColor: "var(--surface)",
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              style={{
+                width: "0.75rem",
+                height: "0.75rem",
+                color: "var(--foreground)",
+                opacity: 0.35,
+              }}
+            />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -263,8 +404,19 @@ export default function DashboardPage() {
               style={{ color: "var(--foreground)" }}
             />
             {search && (
-              <button onClick={() => setSearch("")} className="cursor-pointer hover:opacity-70 transition-opacity">
-                <FontAwesomeIcon icon={faXmark} style={{ width: "0.7rem", height: "0.7rem", color: "var(--foreground)", opacity: 0.35 }} />
+              <button
+                onClick={() => setSearch("")}
+                className="cursor-pointer hover:opacity-70 transition-opacity"
+              >
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  style={{
+                    width: "0.7rem",
+                    height: "0.7rem",
+                    color: "var(--foreground)",
+                    opacity: 0.35,
+                  }}
+                />
               </button>
             )}
           </div>
@@ -275,9 +427,24 @@ export default function DashboardPage() {
                 onClick={() => setDiffFilter(d)}
                 className="rounded-full border text-xs px-3 py-1.5 font-medium cursor-pointer transition-all"
                 style={{
-                  borderColor: diffFilter === d ? (d ? DIFF_COLOR[d] : "var(--foreground)") : "rgba(49,54,40,0.15)",
-                  color: diffFilter === d ? (d ? DIFF_COLOR[d] : "var(--foreground)") : "var(--foreground)",
-                  backgroundColor: diffFilter === d ? (d ? `${DIFF_COLOR[d]}15` : "rgba(49,54,40,0.06)") : "var(--surface)",
+                  borderColor:
+                    diffFilter === d
+                      ? d
+                        ? DIFF_COLOR[d]
+                        : "var(--foreground)"
+                      : "rgba(49,54,40,0.15)",
+                  color:
+                    diffFilter === d
+                      ? d
+                        ? DIFF_COLOR[d]
+                        : "var(--foreground)"
+                      : "var(--foreground)",
+                  backgroundColor:
+                    diffFilter === d
+                      ? d
+                        ? `${DIFF_COLOR[d]}15`
+                        : "rgba(49,54,40,0.06)"
+                      : "var(--surface)",
                   opacity: diffFilter === d ? 1 : 0.55,
                 }}
               >
@@ -291,11 +458,24 @@ export default function DashboardPage() {
       {/* Problem list */}
       {problems.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.4 }}>No problems yet.</p>
-          <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.3 }}>Click &ldquo;Add problem&rdquo; to get started.</p>
+          <p
+            className="text-sm"
+            style={{ color: "var(--foreground)", opacity: 0.4 }}
+          >
+            No problems yet.
+          </p>
+          <p
+            className="text-xs"
+            style={{ color: "var(--foreground)", opacity: 0.3 }}
+          >
+            Click &ldquo;Add problem&rdquo; to get started.
+          </p>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm py-8" style={{ color: "var(--foreground)", opacity: 0.4 }}>
+        <p
+          className="text-sm py-8"
+          style={{ color: "var(--foreground)", opacity: 0.4 }}
+        >
           No results for &ldquo;{search}&rdquo;
         </p>
       ) : (
@@ -304,7 +484,10 @@ export default function DashboardPage() {
             <li
               key={p.id}
               className="rounded-xl border p-4"
-              style={{ borderColor: "rgba(49,54,40,0.1)", backgroundColor: "var(--surface)" }}
+              style={{
+                borderColor: "rgba(49,54,40,0.1)",
+                backgroundColor: "var(--surface)",
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -313,9 +496,14 @@ export default function DashboardPage() {
                     {p.difficulty && (
                       <span
                         className="text-xs font-medium px-2 py-0.5 rounded-full"
-                        style={{ color: DIFF_COLOR[p.difficulty] ?? "var(--foreground)", backgroundColor: `${DIFF_COLOR[p.difficulty] ?? "rgba(49,54,40,0.08)"}18` }}
+                        style={{
+                          color:
+                            DIFF_COLOR[p.difficulty] ?? "var(--foreground)",
+                          backgroundColor: `${DIFF_COLOR[p.difficulty] ?? "rgba(49,54,40,0.08)"}18`,
+                        }}
                       >
-                        {p.difficulty.charAt(0).toUpperCase() + p.difficulty.slice(1)}
+                        {p.difficulty.charAt(0).toUpperCase() +
+                          p.difficulty.slice(1)}
                       </span>
                     )}
                   </div>
@@ -323,14 +511,28 @@ export default function DashboardPage() {
                   {(p.topics.length > 0 || p.patterns.length > 0) && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {p.topics.map((t) => (
-                        <span key={t} className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: "rgba(49,54,40,0.07)", color: "var(--foreground)", opacity: 0.7 }}>
+                        <span
+                          key={t}
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: "rgba(49,54,40,0.07)",
+                            color: "var(--foreground)",
+                            opacity: 0.7,
+                          }}
+                        >
                           {t}
                         </span>
                       ))}
                       {p.patterns.map((pt) => (
-                        <span key={pt} className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: "rgba(49,54,40,0.07)", color: "var(--foreground)", opacity: 0.7 }}>
+                        <span
+                          key={pt}
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: "rgba(49,54,40,0.07)",
+                            color: "var(--foreground)",
+                            opacity: 0.7,
+                          }}
+                        >
                           {pt}
                         </span>
                       ))}
@@ -338,7 +540,10 @@ export default function DashboardPage() {
                   )}
 
                   {p.note && (
-                    <p className="text-xs mt-2 italic" style={{ color: "var(--foreground)", opacity: 0.5 }}>
+                    <p
+                      className="text-xs mt-2 italic"
+                      style={{ color: "var(--foreground)", opacity: 0.5 }}
+                    >
                       {p.note}
                     </p>
                   )}
@@ -349,10 +554,16 @@ export default function DashboardPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs mt-2 hover:opacity-80 transition-opacity"
-                      style={{ color: "var(--accent-dark, var(--foreground))", opacity: 0.6 }}
+                      style={{
+                        color: "var(--accent-dark, var(--foreground))",
+                        opacity: 0.6,
+                      }}
                     >
                       View problem
-                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ width: "0.6rem", height: "0.6rem" }} />
+                      <FontAwesomeIcon
+                        icon={faArrowUpRightFromSquare}
+                        style={{ width: "0.6rem", height: "0.6rem" }}
+                      />
                     </a>
                   )}
                 </div>
@@ -364,7 +575,10 @@ export default function DashboardPage() {
                       className="cursor-pointer hover:opacity-70 transition-opacity"
                       style={{ color: "var(--foreground)", opacity: 0.3 }}
                     >
-                      <FontAwesomeIcon icon={faPen} style={{ width: "0.8rem", height: "0.8rem" }} />
+                      <FontAwesomeIcon
+                        icon={faPen}
+                        style={{ width: "0.8rem", height: "0.8rem" }}
+                      />
                     </button>
                   </Tooltip>
                   <Tooltip content="Remove from your library">
@@ -374,7 +588,10 @@ export default function DashboardPage() {
                       className="cursor-pointer hover:opacity-70 transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
                       style={{ color: "#a20021" }}
                     >
-                      <FontAwesomeIcon icon={faTrash} style={{ width: "0.8rem", height: "0.8rem" }} />
+                      <FontAwesomeIcon
+                        icon={faTrash}
+                        style={{ width: "0.8rem", height: "0.8rem" }}
+                      />
                     </button>
                   </Tooltip>
                 </div>
@@ -397,10 +614,17 @@ export default function DashboardPage() {
             style={{ backgroundColor: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">{editingProblem ? "Edit problem" : "Add problem"}</h2>
+            <h2 className="text-lg font-semibold">
+              {editingProblem ? "Edit problem" : "Add problem"}
+            </h2>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Title</label>
+              <label
+                className="text-xs font-medium"
+                style={{ color: "var(--foreground)", opacity: 0.5 }}
+              >
+                Title
+              </label>
               <input
                 type="text"
                 value={title}
@@ -408,12 +632,21 @@ export default function DashboardPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 autoFocus
                 className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                style={{
+                  borderColor: "rgba(49,54,40,0.18)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Difficulty</label>
+              <label
+                className="text-xs font-medium"
+                style={{ color: "var(--foreground)", opacity: 0.5 }}
+              >
+                Difficulty
+              </label>
               <div className="flex gap-2">
                 {(["easy", "medium", "hard"] as const).map((d) => (
                   <button
@@ -422,9 +655,14 @@ export default function DashboardPage() {
                     onClick={() => setDifficulty(difficulty === d ? "" : d)}
                     className="rounded-full border px-4 py-1.5 text-xs font-medium cursor-pointer transition-all"
                     style={{
-                      borderColor: difficulty === d ? DIFF_COLOR[d] : "rgba(49,54,40,0.15)",
-                      color: difficulty === d ? DIFF_COLOR[d] : "var(--foreground)",
-                      backgroundColor: difficulty === d ? `${DIFF_COLOR[d]}15` : "transparent",
+                      borderColor:
+                        difficulty === d
+                          ? DIFF_COLOR[d]
+                          : "rgba(49,54,40,0.15)",
+                      color:
+                        difficulty === d ? DIFF_COLOR[d] : "var(--foreground)",
+                      backgroundColor:
+                        difficulty === d ? `${DIFF_COLOR[d]}15` : "transparent",
                       opacity: difficulty === d ? 1 : 0.5,
                     }}
                   >
@@ -436,69 +674,125 @@ export default function DashboardPage() {
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Topics</label>
-              <div className="flex flex-wrap gap-1.5">
-                {allTopics.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => toggleTopic(t.id)}
-                    className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all"
-                    style={{
-                      borderColor: selectedTopics.includes(t.id) ? "var(--foreground)" : "rgba(49,54,40,0.15)",
-                      backgroundColor: selectedTopics.includes(t.id) ? "var(--foreground)" : "transparent",
-                      color: selectedTopics.includes(t.id) ? "var(--surface)" : "var(--foreground)",
-                      opacity: selectedTopics.includes(t.id) ? 1 : 0.5,
-                    }}
-                  >
-                    {t.topic}
-                  </button>
-                ))}
+              {selectedTopics.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTopics.map((id) => {
+                    const t = allTopics.find((t) => t.id === id);
+                    if (!t) return null;
+                    return (
+                      <span key={id} className="flex items-center gap-1 rounded-full text-xs px-2.5 py-1" style={{ backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }}>
+                        {t.topic}
+                        <button type="button" onClick={() => toggleTopic(id)} className="cursor-pointer leading-none hover:opacity-70">×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <input
+                type="text"
+                placeholder="Search topics..."
+                value={topicSearch}
+                onChange={(e) => setTopicSearch(e.target.value)}
+                className="rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2"
+                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                {allTopics
+                  .filter((t) => !selectedTopics.includes(t.id) && t.topic.toLowerCase().includes(topicSearch.toLowerCase()))
+                  .map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => { toggleTopic(t.id); setTopicSearch(""); }}
+                      className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all hover:opacity-80"
+                      style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "transparent", color: "var(--foreground)", opacity: 0.6 }}
+                    >
+                      {t.topic}
+                    </button>
+                  ))}
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Patterns</label>
-              <div className="flex flex-wrap gap-1.5">
-                {allPatterns.map((pt) => (
-                  <button
-                    key={pt.id}
-                    type="button"
-                    onClick={() => togglePattern(pt.id)}
-                    className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all"
-                    style={{
-                      borderColor: selectedPatterns.includes(pt.id) ? "var(--foreground)" : "rgba(49,54,40,0.15)",
-                      backgroundColor: selectedPatterns.includes(pt.id) ? "var(--foreground)" : "transparent",
-                      color: selectedPatterns.includes(pt.id) ? "var(--surface)" : "var(--foreground)",
-                      opacity: selectedPatterns.includes(pt.id) ? 1 : 0.5,
-                    }}
-                  >
-                    {pt.pattern}
-                  </button>
-                ))}
+              {selectedPatterns.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPatterns.map((id) => {
+                    const pt = allPatterns.find((p) => p.id === id);
+                    if (!pt) return null;
+                    return (
+                      <span key={id} className="flex items-center gap-1 rounded-full text-xs px-2.5 py-1" style={{ backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }}>
+                        {pt.pattern}
+                        <button type="button" onClick={() => togglePattern(id)} className="cursor-pointer leading-none hover:opacity-70">×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <input
+                type="text"
+                placeholder="Search patterns..."
+                value={patternSearch}
+                onChange={(e) => setPatternSearch(e.target.value)}
+                className="rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2"
+                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+              />
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                {allPatterns
+                  .filter((pt) => !selectedPatterns.includes(pt.id) && pt.pattern.toLowerCase().includes(patternSearch.toLowerCase()))
+                  .map((pt) => (
+                    <button
+                      key={pt.id}
+                      type="button"
+                      onClick={() => { togglePattern(pt.id); setPatternSearch(""); }}
+                      className="rounded-full border text-xs px-2.5 py-1 cursor-pointer transition-all hover:opacity-80"
+                      style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "transparent", color: "var(--foreground)", opacity: 0.6 }}
+                    >
+                      {pt.pattern}
+                    </button>
+                  ))}
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Note <span style={{ opacity: 0.5 }}>(optional)</span></label>
+              <label
+                className="text-xs font-medium"
+                style={{ color: "var(--foreground)", opacity: 0.5 }}
+              >
+                Note <span style={{ opacity: 0.5 }}>(optional)</span>
+              </label>
               <input
                 type="text"
                 value={note}
                 placeholder="Work on brute force first..."
                 onChange={(e) => setNote(e.target.value)}
                 className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                style={{
+                  borderColor: "rgba(49,54,40,0.18)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>URL <span style={{ opacity: 0.5 }}>(optional)</span></label>
+              <label
+                className="text-xs font-medium"
+                style={{ color: "var(--foreground)", opacity: 0.5 }}
+              >
+                URL <span style={{ opacity: 0.5 }}>(optional)</span>
+              </label>
               <input
                 type="url"
                 value={url}
                 placeholder="https://leetcode.com/problems/two-sum/"
                 onChange={(e) => setUrl(e.target.value)}
                 className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                style={{
+                  borderColor: "rgba(49,54,40,0.18)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
               />
             </div>
 
@@ -513,11 +807,24 @@ export default function DashboardPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || !title || !difficulty || selectedTopics.length === 0 || selectedPatterns.length === 0}
+                disabled={
+                  submitting ||
+                  !title ||
+                  !difficulty ||
+                  selectedTopics.length === 0 ||
+                  selectedPatterns.length === 0
+                }
                 className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40"
-                style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                style={{
+                  backgroundColor: "var(--foreground)",
+                  color: "var(--surface)",
+                }}
               >
-                {submitting ? "Saving..." : editingProblem ? "Save changes" : "Add problem"}
+                {submitting
+                  ? "Saving..."
+                  : editingProblem
+                    ? "Save changes"
+                    : "Add problem"}
               </button>
             </div>
           </form>
