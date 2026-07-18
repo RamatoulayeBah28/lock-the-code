@@ -1,10 +1,11 @@
 # Pydantic request/response models go here.
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class ProblemCreate(BaseModel):
     title: str
-    difficulty: str
+    difficulty: Literal["easy", "medium", "hard"]
     note: str | None = None
     url: str | None = None
     topic_ids: list[int]

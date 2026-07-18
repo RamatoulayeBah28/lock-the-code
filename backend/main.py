@@ -45,13 +45,13 @@ def get_me(user=Depends(get_current_user), db=Depends(get_db)):
 
 
 @app.get("/topics")
-def get_topics(user=Depends(get_current_user), db=Depends(get_db)):
+def get_topics(db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT id, topic FROM topics ORDER BY topic")
     return cur.fetchall()
 
 @app.get("/patterns")
-def get_patterns(user=Depends(get_current_user), db=Depends(get_db)):
+def get_patterns(db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT id, pattern FROM patterns ORDER BY pattern")
     return cur.fetchall()
@@ -246,7 +246,13 @@ def notify_daily(request: Request, db=Depends(get_db)):
 
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
-        "SELECT p.user_id, array_agg(p.title ORDER BY p.next_review_at) AS titles "
+        "SELECT p.user_id, COUNT(*) AS due_count, "
+        "array_agg(p.title ORDER BY p.next_review_at ASC) AS titles, "
+        "(SELECT p2.url FROM problems p2 "
+        " WHERE p2.user_id = p.user_id "
+        " AND p2.next_review_at::date <= CURRENT_DATE "
+        " AND (p2.last_practiced IS NULL OR p2.last_practiced::date < CURRENT_DATE) "
+        " ORDER BY p2.next_review_at ASC LIMIT 1) AS urgent_url "
         "FROM problems p "
         "JOIN users u ON p.user_id = u.id "
         "WHERE p.next_review_at::date <= CURRENT_DATE "
@@ -269,28 +275,35 @@ def notify_daily(request: Request, db=Depends(get_db)):
             continue
 
         email = addresses[0]["email_address"]
+        count = row["due_count"]
         titles = row["titles"]
-        count = len(titles)
+        urgent_title = titles[0]
+        other_titles = titles[1:]
+        urgent_url = row["urgent_url"] or "https://lockthecode.net/review"
         label = "problem" if count == 1 else "problems"
-        items_html = "".join(
-            f"<li style='margin:6px 0;color:#313628;font-size:15px;'>{t}</li>"
-            for t in titles
-        )
+        others_html = (
+            "<div style='margin-top:16px;border-top:1px solid #e5e7eb;padding-top:12px;'>"
+            "<p style='color:#9ca3af;font-size:12px;font-weight:600;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.05em;'>Still to tackle</p>"
+            "<ul style='margin:0;padding-left:18px;'>"
+            + "".join(f"<li style='color:#6b7280;font-size:14px;margin:3px 0;'>{t}</li>" for t in other_titles)
+            + "</ul></div>"
+        ) if other_titles else ""
         unsub_token = _unsubscribe_token(row["user_id"], settings.notify_secret)
         unsub_url = f"{settings.backend_url}/unsubscribe/{row['user_id']}/{unsub_token}"
 
         html = f"""
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
   <h2 style="font-size:22px;font-weight:600;color:#313628;margin:0 0 8px;">
-    You have {count} {label} due today &#128274;
+    You have 1 problem due today &#128274;
   </h2>
   <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">
-    Don't forget to practice daily, consistency is key.
+    Start with the most overdue one:
   </p>
-  <ul style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:16px 16px 16px 32px;margin:0 0 24px;list-style:disc;">
-    {items_html}
-  </ul>
-  <a href="https://lockthecode.net/review"
+  <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin:0 0 24px;">
+    <p style="margin:0;color:#313628;font-size:16px;font-weight:600;">{urgent_title}</p>
+    {others_html}
+  </div>
+  <a href="{urgent_url}"
      style="display:inline-block;background:#a20021;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;padding:12px 28px;border-radius:9999px;">
     Start Reviewing &rarr;
   </a>
@@ -311,7 +324,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
         resend.Emails.send({
             "from": "Lock The Code <contact@lockthecode.net>",
             "to": [email],
-            "subject": f"You have {count} {label} due today",
+            "subject": "You have 1 problem due today",
             "html": html,
         })
 
