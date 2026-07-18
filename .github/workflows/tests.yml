@@ -1,0 +1,57 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: leetcode_review_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt pytest httpx2
+
+      - name: Run migrations
+        run: |
+          for f in $(ls backend/db/migrations/*.sql | sort); do
+            psql postgresql://postgres:postgres@localhost:5432/leetcode_review_test -f "$f"
+          done
+
+      - name: Seed test data
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/leetcode_review_test \
+            -c "INSERT INTO topics (topic) VALUES ('Arrays') ON CONFLICT DO NOTHING;"
+          psql postgresql://postgres:postgres@localhost:5432/leetcode_review_test \
+            -c "INSERT INTO patterns (pattern) VALUES ('Two Pointers') ON CONFLICT DO NOTHING;"
+
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest tests/ -v
+        env:
+          TEST_DB_URL: postgresql://postgres:postgres@localhost:5432/leetcode_review_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leetcode_review_test
+          CLERK_SECRET_KEY: sk_test_dummy
+          NOTIFY_SECRET: dummy_notify_secret

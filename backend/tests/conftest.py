@@ -1,3 +1,4 @@
+import os
 import pytest
 import psycopg2
 from fastapi.testclient import TestClient
@@ -5,7 +6,7 @@ from main import app
 from db import get_db
 from auth import get_current_user
 
-TEST_DB_URL = "postgresql://ramatoulaye@localhost/leetcode_review_test"
+TEST_DB_URL = os.environ.get("TEST_DB_URL", "postgresql://ramatoulaye@localhost/leetcode_review_test")
 
 FAKE_USER = {
     "id": "test_user_123",
