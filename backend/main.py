@@ -45,13 +45,13 @@ def get_me(user=Depends(get_current_user), db=Depends(get_db)):
 
 
 @app.get("/topics")
-def get_topics(user=Depends(get_current_user), db=Depends(get_db)):
+def get_topics(db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT id, topic FROM topics ORDER BY topic")
     return cur.fetchall()
 
 @app.get("/patterns")
-def get_patterns(user=Depends(get_current_user), db=Depends(get_db)):
+def get_patterns(db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT id, pattern FROM patterns ORDER BY pattern")
     return cur.fetchall()
