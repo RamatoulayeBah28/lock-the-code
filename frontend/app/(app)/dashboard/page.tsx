@@ -614,16 +614,19 @@ export default function DashboardPage() {
             style={{ backgroundColor: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">
-              {editingProblem ? "Edit problem" : "Add problem"}
-            </h2>
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">
+                {editingProblem ? "Edit problem" : "Add problem"}
+              </h2>
+              <span className="text-xs" style={{ color: "var(--foreground)", opacity: 0.4 }}><span style={{ color: "#ef4444" }}>*</span> required</span>
+            </div>
 
             <div className="flex flex-col gap-1.5">
               <label
                 className="text-xs font-medium"
-                style={{ color: "var(--foreground)", opacity: 0.5 }}
+                style={{ color: "var(--foreground)", opacity: 0.75 }}
               >
-                Title
+                Title <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <input
                 type="text"
@@ -643,9 +646,9 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 className="text-xs font-medium"
-                style={{ color: "var(--foreground)", opacity: 0.5 }}
+                style={{ color: "var(--foreground)", opacity: 0.75 }}
               >
-                Difficulty
+                Difficulty <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <div className="flex gap-2">
                 {(["easy", "medium", "hard"] as const).map((d) => (
@@ -673,7 +676,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Topics</label>
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.75 }}>Topics <span style={{ color: "#ef4444" }}>*</span></label>
               {selectedTopics.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedTopics.map((id) => {
@@ -714,7 +717,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Patterns</label>
+              <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.75 }}>Patterns <span style={{ color: "#ef4444" }}>*</span></label>
               {selectedPatterns.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedPatterns.map((id) => {
@@ -757,7 +760,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 className="text-xs font-medium"
-                style={{ color: "var(--foreground)", opacity: 0.5 }}
+                style={{ color: "var(--foreground)", opacity: 0.75 }}
               >
                 Note <span style={{ opacity: 0.5 }}>(optional)</span>
               </label>
@@ -778,7 +781,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 className="text-xs font-medium"
-                style={{ color: "var(--foreground)", opacity: 0.5 }}
+                style={{ color: "var(--foreground)", opacity: 0.75 }}
               >
                 URL <span style={{ opacity: 0.5 }}>(optional)</span>
               </label>
