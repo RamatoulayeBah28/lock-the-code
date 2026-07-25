@@ -365,8 +365,8 @@ def unsubscribe_email(user_id: str, token: str, db=Depends(get_db)):
   <h2 style="color:#313628;margin:0 0 8px;">You've been unsubscribed</h2>
   <p style="color:#6b7280;margin:0 0 24px;">You won't receive daily review reminders anymore.</p>
   <p style="color:#6b7280;font-size:14px;">
-    Changed your mind? Re-enable emails in your
-    <a href="{settings.frontend_url}/settings" style="color:#a20021;">settings</a>.
+    Changed your mind? Go to your <a href="{settings.frontend_url}/dashboard" style="color:#a20021;">dashboard</a>
+    and re-enable emails under your account menu &rarr; Notifications.
   </p>
 </body>
 </html>
