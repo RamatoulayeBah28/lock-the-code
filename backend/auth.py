@@ -6,6 +6,7 @@ from psycopg2.extras import RealDictCursor
 
 from config import Settings, get_settings
 from db import get_db
+from emails import send_welcome_email
 
 # Purely cosmetic: makes the Swagger "Authorize" button show up in /docs.
 # authenticate_request() below reads the Authorization header itself from
@@ -31,7 +32,6 @@ def _verify_clerk_request(
         raise HTTPException(status_code=401, detail=str(state.reason) if state.reason else "Unauthorized")
     return state
 
-
 def get_current_user(
     state: RequestState = Depends(_verify_clerk_request),
     db=Depends(get_db),
@@ -50,9 +50,13 @@ def get_current_user(
         "ON CONFLICT (id) DO UPDATE SET "
         "clerk_email = COALESCE(EXCLUDED.clerk_email, users.clerk_email), "
         "first_name  = COALESCE(EXCLUDED.first_name,  users.first_name), "
-        "last_name   = COALESCE(EXCLUDED.last_name,   users.last_name)",
+        "last_name   = COALESCE(EXCLUDED.last_name,   users.last_name) RETURNING clerk_email, first_name, (xmin = xmax) AS is_updated,CASE WHEN xmin = xmax THEN 'UPDATED' ELSE 'INSERTED' END AS operation_type;",
         (clerk_user_id, clerk_email, first_name, last_name),
     )
+    new_user = cur.fetchone()
     db.commit()
+    if new_user["operation_type"] == "INSERTED" and clerk_email:
+        send_welcome_email(clerk_email, first_name, clerk_user_id)
+
     cur.execute("SELECT id, clerk_email, first_name, last_name FROM users WHERE id = %s", (clerk_user_id,))
     return cur.fetchone()

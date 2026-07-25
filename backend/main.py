@@ -5,8 +5,8 @@ from fastapi.responses import HTMLResponse, Response
 import hashlib
 import hmac
 import requests
-import resend
 from auth import get_current_user
+from emails import send_email
 from config import get_settings
 from db import get_db
 from schemas import ProblemCreate, ProblemUpdate, ReviewCreate, NotificationSettings
@@ -242,8 +242,6 @@ def notify_daily(request: Request, db=Depends(get_db)):
     if request.headers.get("NOTIFY_SECRET") != settings.notify_secret:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    resend.api_key = settings.resend_api_key
-
     cur = db.cursor(cursor_factory=RealDictCursor)
     cur.execute(
         "SELECT p.user_id, COUNT(*) AS due_count, "
@@ -289,7 +287,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
             + "</ul></div>"
         ) if other_titles else ""
         unsub_token = _unsubscribe_token(row["user_id"], settings.notify_secret)
-        unsub_url = f"{settings.backend_url}/unsubscribe/{row['user_id']}/{unsub_token}"
+        unsub_url = f"{settings.frontend_url}/unsubscribe?uid={row['user_id']}&t={unsub_token}"
 
         html = f"""
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
@@ -321,12 +319,7 @@ def notify_daily(request: Request, db=Depends(get_db)):
 </div>
 """
 
-        resend.Emails.send({
-            "from": "Lock The Code <contact@lockthecode.net>",
-            "to": [email],
-            "subject": "You have 1 problem due today",
-            "html": html,
-        })
+        send_email(email, "You have 1 problem due today", html)
 
     return {"notified": len(rows)}
 
@@ -488,13 +481,11 @@ def submit_contact(body: ContactMessage, user=Depends(get_current_user)):
         if addresses:
             sender_email = addresses[0]["email_address"]
 
-    resend.api_key = settings.resend_api_key
-    resend.Emails.send({
-        "from": "Lock The Code <contact@lockthecode.net>",
-        "to": ["contact@lockthecode.net"],
-        "reply_to": sender_email or "noreply@lockthecode.net",
-        "subject": f"[Contact] {subject}",
-        "html": f"""
+    send_email(
+        to="contact@lockthecode.net",
+        subject=f"[Contact] {subject}",
+        reply_to=sender_email or None,
+        html=f"""
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
   <h2 style="font-size:20px;font-weight:600;color:#313628;margin:0 0 16px;">New contact message</h2>
   <p style="margin:0 0 4px;font-size:13px;color:#6b7280;"><strong>From:</strong> {sender_email or user['id']}</p>
@@ -503,7 +494,7 @@ def submit_contact(body: ContactMessage, user=Depends(get_current_user)):
   <p style="font-size:15px;color:#313628;white-space:pre-wrap;margin:0;">{message}</p>
 </div>
 """,
-    })
+    )
     return {"ok": True}
 
 
