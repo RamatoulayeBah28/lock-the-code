@@ -13,7 +13,8 @@ def creat_deck(payload: dict, user=Depends(get_current_user), db=Depends(get_db)
     row = cur.fetchone()
     if not row["is_pro"]:
         raise HTTPException(status_code=402, detail="Pro subscription required")
-    cur.execute("INSERT INTO decks (title, author_id) VALUES (%s, %s) RETURNING id", (payload["title"], user["id"],))
+    color = payload.get("color", "#56876D")
+    cur.execute("INSERT INTO decks (title, author_id, color) VALUES (%s, %s, %s) RETURNING id", (payload["title"], user["id"], color))
     deck_id = cur.fetchone()["id"]
     for card in payload["cards"]:
         cur.execute("INSERT INTO flashcards (author_id, pattern_id, front, back, deck_id) VALUES (%s, %s, %s, %s, %s)", (user["id"], card.get("pattern_id"), card["front"], card["back"], deck_id))
@@ -29,7 +30,7 @@ def get_patterns(db=Depends(get_db)):
 @router.get("/decks")
 def get_decks(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT d.id, d.title, d.author_id, d.created_at, d.last_studied_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title, d.created_at, d.last_studied_at ORDER BY d.created_at DESC", (user["id"],))
+    cur.execute("SELECT d.id, d.title, d.color, d.author_id, d.created_at, d.last_studied_at, COUNT(f.id) AS card_count FROM decks d LEFT JOIN flashcards f ON f.deck_id = d.id WHERE d.author_id = %s GROUP BY d.id, d.title, d.color, d.created_at, d.last_studied_at ORDER BY d.created_at DESC", (user["id"],))
     return cur.fetchall()
 
 @router.delete("/decks/{deck_id}")
@@ -43,7 +44,13 @@ def delete_deck(deck_id: int, user=Depends(get_current_user), db=Depends(get_db)
 @router.patch("/decks/{deck_id}")
 def update_deck(deck_id: int, payload: dict, user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("UPDATE decks SET title = %s WHERE id = %s AND author_id = %s", (payload["title"], deck_id, user["id"]))
+    title = payload.get("title")
+    color = payload.get("color")
+    if title:
+        cur.execute("UPDATE decks SET title = %s WHERE id = %s AND author_id = %s", (title, deck_id, user["id"]))
+
+    if color:
+        cur.execute("UPDATE decks SET color = %s WHERE id = %s AND author_id = %s", (color, deck_id, user["id"]))
 
     if cur.rowcount == 0:
         raise HTTPException(status_code=404, detail="Deck not found")
