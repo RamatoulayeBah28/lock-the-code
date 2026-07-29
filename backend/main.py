@@ -37,6 +37,10 @@ app.include_router(flashcard_router)
 app.include_router(deck_router)
 app.include_router(clerk_router)
 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
 @app.get("/me")
 def get_me(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
