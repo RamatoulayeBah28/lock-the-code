@@ -19,9 +19,18 @@ import PaywallModal from "@/app/components/PaywallModal";
 import Tooltip from "@/app/components/Tooltip";
 
 const DECK_COLORS = [
-  "#56876D", "#2d6a4f", "#457b9d", "#1d3557",
-  "#7b2d8b", "#6b5b95", "#c1121f", "#b5451b",
-  "#c77dff", "#d4a373", "#495057", "#343a40",
+  "#56876D",
+  "#2d6a4f",
+  "#457b9d",
+  "#1d3557",
+  "#7b2d8b",
+  "#6b5b95",
+  "#c1121f",
+  "#b5451b",
+  "#c77dff",
+  "#d4a373",
+  "#495057",
+  "#343a40",
 ];
 
 type Flashcard = { id?: number; front: string; back: string; pattern?: string };
@@ -54,7 +63,9 @@ export default function FlashcardsPage() {
   ]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [cardErrors, setCardErrors] = useState<{ front: boolean; back: boolean }[]>([{ front: false, back: false }]);
+  const [cardErrors, setCardErrors] = useState<
+    { front: boolean; back: boolean }[]
+  >([{ front: false, back: false }]);
   const [patterns, setPatterns] = useState<{ id: number; pattern: string }[]>(
     [],
   );
@@ -382,7 +393,11 @@ export default function FlashcardsPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title: trimmed, color: deckColor, cards: validCards }),
+        body: JSON.stringify({
+          title: trimmed,
+          color: deckColor,
+          cards: validCards,
+        }),
       });
       if (!res.ok) {
         setCreateError("Something went wrong. Please try again.");
@@ -645,7 +660,11 @@ export default function FlashcardsPage() {
                         </button>
                         <button
                           onClick={() => {
-                            setEditingDeck({ id: deck.id, title: deck.title, color: deck.color });
+                            setEditingDeck({
+                              id: deck.id,
+                              title: deck.title,
+                              color: deck.color,
+                            });
                             setDeckMenu(null);
                           }}
                           className="flex items-center gap-2 px-3 py-2 text-xs hover:opacity-70 cursor-pointer transition-opacity"
@@ -759,7 +778,11 @@ export default function FlashcardsPage() {
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter")
-                    renameDeck(editingDeck.id, editingDeck.title, editingDeck.color);
+                    renameDeck(
+                      editingDeck.id,
+                      editingDeck.title,
+                      editingDeck.color,
+                    );
                 }}
                 className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
                 style={{
@@ -769,17 +792,38 @@ export default function FlashcardsPage() {
                 }}
               />
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Colour</p>
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: "var(--foreground)", opacity: 0.5 }}
+                >
+                  Color
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {DECK_COLORS.map((c) => (
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setEditingDeck({ ...editingDeck, color: c })}
+                      onClick={() =>
+                        setEditingDeck({ ...editingDeck, color: c })
+                      }
                       className="w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-all"
-                      style={{ backgroundColor: c, outline: editingDeck.color === c ? `2px solid ${c}` : "none", outlineOffset: "2px" }}
+                      style={{
+                        backgroundColor: c,
+                        outline:
+                          editingDeck.color === c ? `2px solid ${c}` : "none",
+                        outlineOffset: "2px",
+                      }}
                     >
-                      {editingDeck.color === c && <FontAwesomeIcon icon={faCheck} style={{ width: "0.6rem", height: "0.6rem", color: "white" }} />}
+                      {editingDeck.color === c && (
+                        <FontAwesomeIcon
+                          icon={faCheck}
+                          style={{
+                            width: "0.6rem",
+                            height: "0.6rem",
+                            color: "white",
+                          }}
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -793,7 +837,13 @@ export default function FlashcardsPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => renameDeck(editingDeck.id, editingDeck.title, editingDeck.color)}
+                  onClick={() =>
+                    renameDeck(
+                      editingDeck.id,
+                      editingDeck.title,
+                      editingDeck.color,
+                    )
+                  }
                   className="rounded-full h-9 px-4 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
                   style={{
                     backgroundColor: "var(--foreground)",
@@ -819,7 +869,11 @@ export default function FlashcardsPage() {
           <div
             className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto"
             style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-            onClick={() => { setDeckModal(false); setDeckColor(DECK_COLORS[0]); setCardErrors([{ front: false, back: false }]); }}
+            onClick={() => {
+              setDeckModal(false);
+              setDeckColor(DECK_COLORS[0]);
+              setCardErrors([{ front: false, back: false }]);
+            }}
           >
             <div
               className="w-full max-w-lg rounded-2xl flex flex-col gap-6 p-8 my-auto"
@@ -849,9 +903,14 @@ export default function FlashcardsPage() {
                 />
               </div>
 
-              {/* Colour picker */}
+              {/* Color picker */}
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Colour</p>
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: "var(--foreground)", opacity: 0.5 }}
+                >
+                  Color
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {DECK_COLORS.map((c) => (
                     <button
@@ -859,9 +918,22 @@ export default function FlashcardsPage() {
                       type="button"
                       onClick={() => setDeckColor(c)}
                       className="w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-all"
-                      style={{ backgroundColor: c, outline: deckColor === c ? `2px solid ${c}` : "none", outlineOffset: "2px" }}
+                      style={{
+                        backgroundColor: c,
+                        outline: deckColor === c ? `2px solid ${c}` : "none",
+                        outlineOffset: "2px",
+                      }}
                     >
-                      {deckColor === c && <FontAwesomeIcon icon={faCheck} style={{ width: "0.6rem", height: "0.6rem", color: "white" }} />}
+                      {deckColor === c && (
+                        <FontAwesomeIcon
+                          icon={faCheck}
+                          style={{
+                            width: "0.6rem",
+                            height: "0.6rem",
+                            color: "white",
+                          }}
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -891,8 +963,12 @@ export default function FlashcardsPage() {
                       {deckCards.length > 1 && (
                         <button
                           onClick={() => {
-                            setDeckCards((prev) => prev.filter((_, idx) => idx !== i));
-                            setCardErrors((prev) => prev.filter((_, idx) => idx !== i));
+                            setDeckCards((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            );
+                            setCardErrors((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            );
                           }}
                           className="cursor-pointer hover:opacity-70 transition-opacity"
                           style={{ color: "var(--foreground)", opacity: 0.3 }}
@@ -909,7 +985,9 @@ export default function FlashcardsPage() {
                       onChange={(e) => {
                         setDeckCards((prev) =>
                           prev.map((card, idx) =>
-                            idx === i ? { ...card, front: e.target.value } : card,
+                            idx === i
+                              ? { ...card, front: e.target.value }
+                              : card,
                           ),
                         );
                         setCardErrors((prev) =>
@@ -921,20 +999,29 @@ export default function FlashcardsPage() {
                       placeholder="Term (front)"
                       className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
                       style={{
-                        borderColor: cardErrors[i]?.front ? "#a20021" : "rgba(49,54,40,0.15)",
+                        borderColor: cardErrors[i]?.front
+                          ? "#a20021"
+                          : "rgba(49,54,40,0.15)",
                         backgroundColor: "var(--background)",
                         color: "var(--foreground)",
                       }}
                     />
                     {cardErrors[i]?.front && (
-                      <p className="text-xs" style={{ color: "#a20021", marginTop: "-0.25rem" }}>Term is required.</p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "#a20021", marginTop: "-0.25rem" }}
+                      >
+                        Term is required.
+                      </p>
                     )}
                     <input
                       value={c.back}
                       onChange={(e) => {
                         setDeckCards((prev) =>
                           prev.map((card, idx) =>
-                            idx === i ? { ...card, back: e.target.value } : card,
+                            idx === i
+                              ? { ...card, back: e.target.value }
+                              : card,
                           ),
                         );
                         setCardErrors((prev) =>
@@ -946,13 +1033,20 @@ export default function FlashcardsPage() {
                       placeholder="Definition (back)"
                       className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
                       style={{
-                        borderColor: cardErrors[i]?.back ? "#a20021" : "rgba(49,54,40,0.15)",
+                        borderColor: cardErrors[i]?.back
+                          ? "#a20021"
+                          : "rgba(49,54,40,0.15)",
                         backgroundColor: "var(--background)",
                         color: "var(--foreground)",
                       }}
                     />
                     {cardErrors[i]?.back && (
-                      <p className="text-xs" style={{ color: "#a20021", marginTop: "-0.25rem" }}>Definition is required.</p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "#a20021", marginTop: "-0.25rem" }}
+                      >
+                        Definition is required.
+                      </p>
                     )}
                     <select
                       value={c.pattern_id ?? ""}
@@ -994,7 +1088,10 @@ export default function FlashcardsPage() {
                       ...prev,
                       { front: "", back: "", pattern_id: null },
                     ]);
-                    setCardErrors((prev) => [...prev, { front: false, back: false }]);
+                    setCardErrors((prev) => [
+                      ...prev,
+                      { front: false, back: false },
+                    ]);
                   }}
                   className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-70 transition-opacity self-start"
                   style={{ color: "var(--foreground)", opacity: 0.45 }}
