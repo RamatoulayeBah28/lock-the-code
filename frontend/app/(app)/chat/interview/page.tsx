@@ -107,6 +107,7 @@ type RestoredSession = {
   language: string;
   secondsLeft: number;
   timerStarted: boolean;
+  interviewEnded: boolean;
 };
 
 function parseRestoredSession(): RestoredSession | null {
@@ -126,6 +127,7 @@ function parseRestoredSession(): RestoredSession | null {
       language: data.language,
       secondsLeft,
       timerStarted: secondsLeft > 0,
+      interviewEnded: data.interviewEnded ?? false,
     };
   } catch {
     sessionStorage.removeItem("ltc_interview");
@@ -149,7 +151,7 @@ export default function InterviewPage() {
   const [timerStarted, setTimerStarted] = useState(() => _restored?.timerStarted ?? false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
   const [endConfirm, setEndConfirm] = useState(false);
-  const [interviewEnded, setInterviewEnded] = useState(false);
+  const [interviewEnded, setInterviewEnded] = useState(() => _restored?.interviewEnded ?? false);
   const [codeRunning, setCodeRunning] = useState(false);
   const [codeOutput, setCodeOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null);
   const [showConsole, setShowConsole] = useState(false);
@@ -173,12 +175,14 @@ export default function InterviewPage() {
   const codeRef = useRef("");
   const languageRef = useRef("python");
   const secondsLeftRef = useRef(0);
+  const interviewEndedRef = useRef(false);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { streamingRef.current = streaming; }, [streaming]);
   useEffect(() => { codeRef.current = code; }, [code]);
   useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  useEffect(() => { interviewEndedRef.current = interviewEnded; }, [interviewEnded]);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const mobileChatScrollRef = useRef<HTMLDivElement>(null);
@@ -204,6 +208,7 @@ export default function InterviewPage() {
             code: codeRef.current,
             language: languageRef.current,
             secondsLeft: secondsLeftRef.current,
+            interviewEnded: interviewEndedRef.current,
             leftAt: Date.now(),
           }));
         } catch {}
@@ -979,7 +984,8 @@ export default function InterviewPage() {
           {interviewEnded ? (
             <button
               onClick={startNewInterview}
-              className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors shrink-0"
+              disabled={streaming}
+              className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
               Start new interview
             </button>
