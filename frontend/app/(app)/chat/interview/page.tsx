@@ -149,6 +149,7 @@ export default function InterviewPage() {
   const [timerStarted, setTimerStarted] = useState(() => _restored?.timerStarted ?? false);
   const [mobileTab, setMobileTab] = useState<"chat" | "code">("chat");
   const [endConfirm, setEndConfirm] = useState(false);
+  const [interviewEnded, setInterviewEnded] = useState(false);
   const [codeRunning, setCodeRunning] = useState(false);
   const [codeOutput, setCodeOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null);
   const [showConsole, setShowConsole] = useState(false);
@@ -214,23 +215,23 @@ export default function InterviewPage() {
 
   // Signal to the layout nav guard that an interview is actively running
   useEffect(() => {
-    if (phase.type === "interviewing") {
+    if (phase.type === "interviewing" && !interviewEnded) {
       sessionStorage.setItem("ltc_interview_running", "1");
     } else {
       sessionStorage.removeItem("ltc_interview_running");
     }
     return () => sessionStorage.removeItem("ltc_interview_running");
-  }, [phase.type]);
+  }, [phase.type, interviewEnded]);
 
   // Warn on browser tab close/reload during an active interview
   useEffect(() => {
-    if (phase.type !== "interviewing") return;
+    if (phase.type !== "interviewing" || interviewEnded) return;
     function onBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
     }
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [phase.type]);
+  }, [phase.type, interviewEnded]);
 
   // 5-minute inactivity → end the interview
   function resetInactivity() {
@@ -539,6 +540,7 @@ export default function InterviewPage() {
   function endInterview() {
     setEndConfirm(false);
     if (phase.type !== "interviewing") return;
+    setInterviewEnded(true);
     streamMessage(
       messages,
       phase.level,
@@ -546,6 +548,17 @@ export default function InterviewPage() {
       phase.timeLimit,
       "I'd like to end the interview now and move to the feedback session.",
     );
+  }
+
+  function startNewInterview() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setMessages([]);
+    setCode("");
+    setInput("");
+    setInterviewEnded(false);
+    setTimerStarted(false);
+    setSecondsLeft(0);
+    setPhase({ type: "selecting_problem" });
   }
 
   function handleSend() {
@@ -963,13 +976,22 @@ export default function InterviewPage() {
           </>
         )}
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={() => setEndConfirm(true)}
-            disabled={streaming}
-            className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors disabled:opacity-40 shrink-0"
-          >
-            End interview
-          </button>
+          {interviewEnded ? (
+            <button
+              onClick={startNewInterview}
+              className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors shrink-0"
+            >
+              Start new interview
+            </button>
+          ) : (
+            <button
+              onClick={() => setEndConfirm(true)}
+              disabled={streaming}
+              className="text-xs font-medium px-3 py-1.5 rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors disabled:opacity-40 shrink-0"
+            >
+              End interview
+            </button>
+          )}
           <div
             className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${timerColor}`}
           >
