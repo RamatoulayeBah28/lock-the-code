@@ -7,6 +7,7 @@ import { faRobot, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 
 type Step =
   | { type: "selecting_problem" }
+  | { type: "selecting_from_list" }
   | { type: "selecting_help"; problem: string; problemUrl?: string }
   | {
       type: "chatting";
@@ -45,6 +46,10 @@ export default function TutorPage() {
     title: string;
     url: string | null;
   } | null>(null);
+  const [savedProblems, setSavedProblems] = useState<
+    { id: number; title: string; url: string | null }[]
+  >([]);
+  const [listLoading, setListLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -80,6 +85,17 @@ export default function TutorPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
+
+  async function loadSavedProblems() {
+    setStep({ type: "selecting_from_list" });
+    setListLoading(true);
+    const token = await getToken();
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/problems`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setSavedProblems(await res.json());
+    setListLoading(false);
+  }
 
   async function startChat(
     problem: string,
@@ -219,37 +235,56 @@ export default function TutorPage() {
               A specific problem (I&apos;ll type it)
             </p>
           </button>
+          <button
+            onClick={loadSavedProblems}
+            className="rounded-xl border border-foreground/10 p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
+          >
+            <p className="font-medium">A problem from my saved list</p>
+          </button>
         </div>
-        {!todayProblem && (
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Problem name or description..."
-              value={customProblem}
-              onChange={(e) => setCustomProblem(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && customProblem.trim())
+      </div>
+    );
+  }
+
+  // ── Setup: pick from saved problems ─────────────────────────────────────
+  if (step.type === "selecting_from_list") {
+    return (
+      <div className="p-8 max-w-xl mx-auto flex flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <BotIcon />
+          <h1 className="text-2xl font-semibold">Choose a problem</h1>
+        </div>
+        {listLoading ? (
+          <p className="text-foreground/60 text-sm">Loading your problems…</p>
+        ) : savedProblems.length === 0 ? (
+          <p className="text-foreground/60 text-sm">
+            No saved problems yet. Add some from the Problems page.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3 overflow-y-auto max-h-[60vh]">
+            {savedProblems.map((p) => (
+              <button
+                key={p.id}
+                onClick={() =>
                   setStep({
                     type: "selecting_help",
-                    problem: customProblem.trim(),
-                  });
-              }}
-              className="rounded-lg border border-foreground/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            <button
-              disabled={!customProblem.trim()}
-              onClick={() =>
-                setStep({
-                  type: "selecting_help",
-                  problem: customProblem.trim(),
-                })
-              }
-              className="rounded-full bg-primary text-primary-foreground text-sm font-medium h-10 px-6 cursor-pointer transition-opacity hover:opacity-90 self-end disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Continue
-            </button>
+                    problem: p.title,
+                    problemUrl: p.url ?? undefined,
+                  })
+                }
+                className="rounded-xl border border-foreground/10 p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
+              >
+                <p className="font-medium">{p.title}</p>
+              </button>
+            ))}
           </div>
         )}
+        <button
+          onClick={() => setStep({ type: "selecting_problem" })}
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors self-start"
+        >
+          ← Back
+        </button>
       </div>
     );
   }
@@ -288,6 +323,12 @@ export default function TutorPage() {
             Continue
           </button>
         </div>
+        <button
+          onClick={() => setStep({ type: "selecting_problem" })}
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors self-start"
+        >
+          ← Back
+        </button>
       </div>
     );
   }
@@ -324,6 +365,12 @@ export default function TutorPage() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setStep({ type: "selecting_problem" })}
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors self-start"
+        >
+          ← Back
+        </button>
       </div>
     );
   }

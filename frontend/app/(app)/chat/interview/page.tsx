@@ -630,6 +630,12 @@ export default function InterviewPage() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setPhase({ type: "selecting_problem" })}
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors self-start"
+        >
+          ← Back
+        </button>
       </div>
     );
   }
@@ -681,6 +687,17 @@ export default function InterviewPage() {
             </button>
           </div>
         </div>
+        <button
+          onClick={() =>
+            setPhase({
+              type: "selecting_level",
+              problemChoice: phase.problemChoice,
+            })
+          }
+          className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors self-start"
+        >
+          ← Back
+        </button>
       </div>
     );
   }
