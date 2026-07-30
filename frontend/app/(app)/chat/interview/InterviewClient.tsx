@@ -10,6 +10,8 @@ import {
   faStop,
   faPlay,
   faVideo,
+  faVolumeHigh,
+  faVolumeXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Editor from "@monaco-editor/react";
 
@@ -256,6 +258,9 @@ export default function InterviewPage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
 
+  // TTS
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+
   // Voice input
   const [isListening, setIsListening] = useState(false);
   const [micSupported] = useState(
@@ -281,6 +286,7 @@ export default function InterviewPage() {
   const interviewEndedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+  const ttsEnabledRef = useRef(true);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -303,6 +309,9 @@ export default function InterviewPage() {
   useEffect(() => {
     interviewEndedRef.current = interviewEnded;
   }, [interviewEnded]);
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled;
+  }, [ttsEnabled]);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const mobileChatScrollRef = useRef<HTMLDivElement>(null);
@@ -316,9 +325,27 @@ export default function InterviewPage() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [input]);
 
+  function speak(text: string) {
+    if (!("speechSynthesis" in window) || !text.trim()) return;
+    const utt = new SpeechSynthesisUtterance(text.trim());
+    utt.rate = 1.15;
+    utt.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred =
+      voices.find(
+        (v) => v.name.toLowerCase().includes("google") && v.lang.startsWith("en"),
+      ) ??
+      voices.find((v) => v.lang.startsWith("en-US")) ??
+      voices.find((v) => v.lang.startsWith("en")) ??
+      null;
+    if (preferred) utt.voice = preferred;
+    window.speechSynthesis.speak(utt);
+  }
+
   // Save interview state on unmount so user can return within 1 minute
   useEffect(() => {
     return () => {
+      window.speechSynthesis?.cancel();
       // Stop camera tracks on unmount
       cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
       cameraStreamRef.current = null;
@@ -500,6 +527,7 @@ export default function InterviewPage() {
       (window as any).SpeechRecognition ??
       (window as any).webkitSpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!SR || streamingRef.current) return;
+    window.speechSynthesis?.cancel();
 
     finalTranscriptRef.current = "";
     autoSubmitRef.current = false;
@@ -530,6 +558,7 @@ export default function InterviewPage() {
         const text = finalTranscriptRef.current.trim();
         const p = phaseRef.current;
         if (text && !streamingRef.current && p.type === "interviewing") {
+          window.speechSynthesis?.cancel();
           const apiMode = modeFromType(p.interviewType);
           const ctx =
             p.interviewType === "behavioral"
@@ -757,6 +786,46 @@ export default function InterviewPage() {
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
+      let ttsBuf = "";
+
+      // Speak completed sentences as they arrive; force=true drains the remainder.
+      // Uses indexOf (first boundary) so speech starts at the earliest break,
+      // not after multiple sentences have accumulated.
+      function flushTts(force = false) {
+        if (!ttsEnabledRef.current) return;
+        if (force) {
+          if (ttsBuf.trim()) speak(ttsBuf.trim());
+          ttsBuf = "";
+          return;
+        }
+        let breakAt = -1;
+        let skipLen = 2;
+        for (const [sep, skip] of [
+          ["! ", 2], ["? ", 2], [". ", 2],
+          ["!\n", 2], ["?\n", 2], [".\n", 2],
+          [":\n", 2], [": ", 2], ["\n\n", 2],
+        ] as [string, number][]) {
+          const i = ttsBuf.indexOf(sep);
+          if (i !== -1 && (breakAt === -1 || i < breakAt)) {
+            breakAt = i;
+            skipLen = skip;
+          }
+        }
+        if (breakAt !== -1) {
+          const toSpeak = ttsBuf.slice(0, breakAt + 1).trim();
+          ttsBuf = ttsBuf.slice(breakAt + skipLen);
+          if (toSpeak) speak(toSpeak);
+          return;
+        }
+        // Fallback: no break found but buffer is long — flush at a word boundary
+        if (ttsBuf.length > 100) {
+          const spaceIdx = ttsBuf.lastIndexOf(" ", 100);
+          if (spaceIdx > 20) {
+            speak(ttsBuf.slice(0, spaceIdx).trim());
+            ttsBuf = ttsBuf.slice(spaceIdx + 1);
+          }
+        }
+      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -768,6 +837,8 @@ export default function InterviewPage() {
           if (data === "[DONE]") break;
           try {
             const text = JSON.parse(data).text as string;
+            ttsBuf += text;
+            flushTts();
             setMessages((prev) => [
               ...prev.slice(0, -1),
               {
@@ -778,6 +849,8 @@ export default function InterviewPage() {
           } catch {}
         }
       }
+
+      flushTts(true);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -877,6 +950,7 @@ export default function InterviewPage() {
   }
 
   function startNewInterview() {
+    window.speechSynthesis?.cancel();
     if (timerRef.current) clearInterval(timerRef.current);
     cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
     cameraStreamRef.current = null;
@@ -894,6 +968,7 @@ export default function InterviewPage() {
   function handleSend() {
     if (!input.trim() || streaming || phase.type !== "interviewing") return;
     if (isListening) handleStopOnly();
+    window.speechSynthesis?.cancel();
     const apiMode = modeFromType(phase.interviewType);
     const ctx =
       phase.interviewType === "behavioral"
@@ -1439,6 +1514,7 @@ export default function InterviewPage() {
         rows={1}
         value={input}
         onChange={(e) => {
+          if (e.target.value && !input) window.speechSynthesis?.cancel();
           setInput(e.target.value);
           e.target.style.height = "auto";
           e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
@@ -1727,6 +1803,25 @@ export default function InterviewPage() {
               End interview
             </button>
           )}
+          <button
+            onClick={() => {
+              const next = !ttsEnabled;
+              setTtsEnabled(next);
+              if (!next) window.speechSynthesis?.cancel();
+            }}
+            title={ttsEnabled ? "Mute interviewer voice" : "Unmute interviewer voice"}
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-foreground/20 cursor-pointer hover:border-foreground/40 transition-colors shrink-0"
+          >
+            <FontAwesomeIcon
+              icon={ttsEnabled ? faVolumeHigh : faVolumeXmark}
+              style={{
+                width: "0.875rem",
+                height: "0.875rem",
+                color: ttsEnabled ? "var(--accent)" : "var(--foreground)",
+                opacity: ttsEnabled ? 1 : 0.4,
+              }}
+            />
+          </button>
           <div
             className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${timerColor}`}
           >
