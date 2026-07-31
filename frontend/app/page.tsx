@@ -77,7 +77,7 @@ function BrowserMockup() {
       {/* Video (primary) */}
       {!videoFailed ? (
         <video
-          src="/demo.mp4"
+          src="/lockthecode.mp4"
           autoPlay
           muted
           loop
