@@ -22,8 +22,8 @@ The only free technical interview study plan you need. Lock The Code uses SM-2 s
 - **SM-2 spaced repetition** — confidence ratings (Forgot → Mastered) drive scheduling with per-problem easiness factor
 - **Review queue** — daily card surfacing your most overdue problem
 - **AI Tutor** — Socratic coding coach that guides you through problems using UMPIRE without giving away answers (Pro)
-- **Mock Interviewer** — simulates a real technical interview with timer, code editor, and structured feedback (Pro)
-- **Flashcard decks** — create custom decks with front/back cards, pattern tags, spaced repetition, and edit-in-place (Pro, one free try)
+- **Mock Interviewer** — four interview types (Behavioral, System Design, Low-Level Design, LeetCode) with timer, code editor, structured feedback, and AI voice TTS (Pro)
+- **Flashcard decks** — create custom decks manually or generate them with AI; front/back cards, pattern tags, spaced repetition, and edit-in-place (Pro)
 - **Stripe billing** — free trial, monthly, annual, and lifetime plans with webhook-backed Pro status
 - **Daily email notifications** — Resend-powered reminders when problems are due, skips problems already reviewed that day
 - **Google Calendar sync** — ICS feed of your review schedule
@@ -102,8 +102,10 @@ npm run dev
 - [x] Clerk auth with per-user data isolation
 - [x] Stripe billing (free trial, monthly, annual, lifetime)
 - [x] AI Tutor mode (Claude Opus 4.8, Socratic/UMPIRE, streaming)
-- [x] Mock Interviewer mode (timer, code editor, structured feedback)
+- [x] Mock Interviewer — 4 types (Behavioral, System Design, LLD, LeetCode), timer, code editor, structured feedback
+- [x] AI voice TTS for interviewer (Web Speech API, sentence-boundary streaming)
 - [x] Flashcard decks with edit-in-place, pattern tags, SRS session
+- [x] AI flashcard generation (Claude, scope enforcement, preview + edit before save, duplicate avoidance)
 - [x] Daily email notifications (Resend, timezone-aware, skips already-reviewed)
 - [x] Google Calendar sync (ICS feed)
 - [x] Account deletion webhook (cancels Stripe, cascades DB delete)
@@ -112,7 +114,6 @@ npm run dev
 
 ### Todo
 - [ ] Deck color picker
-- [ ] AI-generated flashcard content
 - [ ] Tooltips throughout the app
 - [ ] Rollback plan for production deploys
 - [ ] Pattern filter on decks page
