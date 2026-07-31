@@ -14,6 +14,8 @@ import {
   faPencil,
   faMagnifyingGlass,
   faEllipsisVertical,
+  faWandMagicSparkles,
+  faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 import PaywallModal from "@/app/components/PaywallModal";
 import Tooltip from "@/app/components/Tooltip";
@@ -93,9 +95,23 @@ export default function FlashcardsPage() {
   const [editDeckTitle, setEditDeckTitle] = useState("");
   const [editDeckCards, setEditDeckCards] = useState<DeckCard[]>([]);
   const [editDeckLoading, setEditDeckLoading] = useState(false);
+  const [editCardError, setEditCardError] = useState("");
   const [activeSessionDeckId, setActiveSessionDeckId] = useState<number | null>(
     null,
   );
+
+  // AI generation flow
+  type GenStep = "mode" | "topic" | "count" | "deck_pick" | "loading" | "preview" | "error";
+  const [genStep, setGenStep] = useState<GenStep | null>(null);
+  const [genMode, setGenMode] = useState<"deck" | "cards">("deck");
+  const [genTopic, setGenTopic] = useState("");
+  const [genPatternId, setGenPatternId] = useState<number | null>(null);
+  const [genCount, setGenCount] = useState(10);
+  const [genDeckId, setGenDeckId] = useState<number | null>(null);
+  const [genCards, setGenCards] = useState<{ front: string; back: string }[]>([]);
+  const [genError, setGenError] = useState("");
+  const [genSaving, setGenSaving] = useState(false);
+  const [genExistingFronts, setGenExistingFronts] = useState<string[]>([]);
 
   useEffect(() => {
     async function init() {
@@ -138,6 +154,7 @@ export default function FlashcardsPage() {
     setEditDeckId(deck.id);
     setEditDeckTitle(deck.title);
     setEditDeckCards([]);
+    setEditCardError("");
     setEditDeckLoading(true);
     setView("edit");
     try {
@@ -162,24 +179,22 @@ export default function FlashcardsPage() {
   }
 
   async function saveCard(card: DeckCard) {
+    if (card.id < 0) return;
     try {
       const token = await getToken();
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${card.id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          front: card.front,
-          back: card.back,
-          pattern_id: card.pattern_id,
-        }),
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ front: card.front, back: card.back, pattern_id: card.pattern_id }),
       });
     } catch {}
   }
 
   async function deleteCard(cardId: number) {
+    if (cardId < 0) {
+      setEditDeckCards((prev) => prev.filter((c) => c.id !== cardId));
+      return;
+    }
     try {
       const token = await getToken();
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${cardId}`, {
@@ -195,31 +210,37 @@ export default function FlashcardsPage() {
     } catch {}
   }
 
-  async function addCardToDeck() {
-    if (!editDeckId) return;
-    try {
+  function addCardToDeck() {
+    setEditCardError("");
+    setEditDeckCards((prev) => [...prev, { id: -Date.now(), front: "", back: "", pattern_id: null }]);
+  }
+
+  async function handleSaveChanges() {
+    const newCards = editDeckCards.filter((c) => c.id < 0);
+    const hasBlank = newCards.some((c) => !c.front.trim() || !c.back.trim());
+    if (hasBlank) {
+      setEditCardError("All new cards require both a front and a back.");
+      return;
+    }
+    if (newCards.length > 0 && editDeckId) {
       const token = await getToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/decks/${editDeckId}/cards`,
-        {
+      for (const card of newCards) {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks/${editDeckId}/cards`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ front: "", back: "", pattern_id: null }),
-        },
-      );
-      if (res.ok) {
-        const newCard = await res.json();
-        setEditDeckCards((prev) => [...prev, newCard]);
-        setUserDecks((prev) =>
-          prev.map((d) =>
-            d.id === editDeckId ? { ...d, card_count: d.card_count + 1 } : d,
-          ),
-        );
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ front: card.front, back: card.back, pattern_id: card.pattern_id }),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setEditDeckCards((prev) => prev.map((c) => c.id === card.id ? created : c));
+          setUserDecks((prev) =>
+            prev.map((d) => d.id === editDeckId ? { ...d, card_count: d.card_count + 1 } : d),
+          );
+        }
       }
-    } catch {}
+    }
+    setEditCardError("");
+    setView("decks");
   }
 
   async function renameDeck(deckId: number, title: string, color: string) {
@@ -418,6 +439,87 @@ export default function FlashcardsPage() {
       setCreateError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  function closeGen() {
+    setGenStep(null);
+    setGenTopic("");
+    setGenPatternId(null);
+    setGenCount(10);
+    setGenDeckId(null);
+    setGenCards([]);
+    setGenError("");
+    setGenExistingFronts([]);
+  }
+
+  async function runGenerate() {
+    setGenStep("loading");
+    try {
+      const token = await getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: genTopic, count: genCount, existing_fronts: genExistingFronts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setGenError(data.detail || "Something went wrong. Please try again.");
+        setGenStep("error");
+        return;
+      }
+      setGenCards(data.cards);
+      setGenStep("preview");
+    } catch {
+      setGenError("Something went wrong. Please try again.");
+      setGenStep("error");
+    }
+  }
+
+  async function saveGenerated() {
+    setGenSaving(true);
+    try {
+      const token = await getToken();
+      if (genMode === "deck") {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: genTopic.slice(0, 60),
+            color: DECK_COLORS[0],
+            cards: genCards.map((c) => ({ ...c, pattern_id: genPatternId })),
+          }),
+        });
+        if (res.ok) {
+          const token2 = await getToken();
+          const decksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks`, {
+            headers: { Authorization: `Bearer ${token2}` },
+          });
+          if (decksRes.ok) {
+            setUserDecks(await decksRes.json());
+            closeGen();
+          }
+        }
+      } else {
+        if (!genDeckId) return;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/decks/${genDeckId}/cards/bulk`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cards: genCards.map((c) => ({ ...c, pattern_id: genPatternId })),
+          }),
+        });
+        if (res.ok) {
+          const { created } = await res.json();
+          setUserDecks((prev) =>
+            prev.map((d) => d.id === genDeckId ? { ...d, card_count: d.card_count + created } : d),
+          );
+          closeGen();
+        }
+      }
+    } catch {
+    } finally {
+      setGenSaving(false);
     }
   }
 
@@ -696,24 +798,9 @@ export default function FlashcardsPage() {
                   </div>
                 ))}
 
-                {/* New deck */}
-                <button
-                  onClick={async () => {
-                    if (isPro === false) {
-                      router.push("/pricing");
-                      return;
-                    }
-                    if (patterns.length === 0) {
-                      const token = await getToken();
-                      const res = await fetch(
-                        `${process.env.NEXT_PUBLIC_API_URL}/patterns`,
-                        { headers: { Authorization: `Bearer ${token}` } },
-                      );
-                      if (res.ok) setPatterns(await res.json());
-                    }
-                    setDeckModal(true);
-                  }}
-                  className="relative rounded-2xl border border-dashed flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-opacity cursor-pointer"
+                {/* New deck — plus opens manual flow; wand corner button opens AI flow */}
+                <div
+                  className="relative rounded-2xl border border-dashed flex flex-col items-center justify-center"
                   style={{
                     borderColor: "rgba(49,54,40,0.2)",
                     width: "176px",
@@ -722,36 +809,63 @@ export default function FlashcardsPage() {
                 >
                   {isPro === false && (
                     <span
-                      className="absolute top-2.5 right-2.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: "var(--accent)",
-                        color: "#313628",
-                      }}
+                      className="absolute top-2.5 left-2.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: "var(--accent)", color: "#313628" }}
                     >
                       Pro
                     </span>
                   )}
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "rgba(49,54,40,0.08)" }}
+                  {/* Plus — manual deck creation */}
+                  <button
+                    onClick={async () => {
+                      if (isPro === false) { router.push("/pricing"); return; }
+                      if (patterns.length === 0) {
+                        const token = await getToken();
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } });
+                        if (res.ok) setPatterns(await res.json());
+                      }
+                      setDeckModal(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-2 hover:opacity-70 transition-opacity cursor-pointer w-full h-full"
                   >
-                    <FontAwesomeIcon
-                      icon={faPlus}
-                      style={{
-                        width: "1rem",
-                        height: "1rem",
-                        color: "var(--foreground)",
-                        opacity: 0.5,
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "rgba(49,54,40,0.08)" }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faPlus}
+                        style={{ width: "1rem", height: "1rem", color: "var(--foreground)", opacity: 0.5 }}
+                      />
+                    </div>
+                    <p className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.4 }}>New deck</p>
+                  </button>
+                  {/* AI generate — rendered last so it stacks above the full-width plus button */}
+                  <div className="absolute top-2.5 right-2.5 z-10 inline-flex group/wand">
+                    <button
+                      onClick={async () => {
+                        if (isPro === false) { router.push("/pricing"); return; }
+                        if (patterns.length === 0) {
+                          const token = await getToken();
+                          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/patterns`, { headers: { Authorization: `Bearer ${token}` } });
+                          if (res.ok) setPatterns(await res.json());
+                        }
+                        setGenStep("mode");
                       }}
-                    />
+                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: "rgba(49,54,40,0.07)" }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faWandMagicSparkles}
+                        style={{ width: "0.65rem", height: "0.65rem", color: "var(--accent)" }}
+                      />
+                    </button>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 pointer-events-none opacity-0 group-hover/wand:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                      <div className="text-xs font-medium px-2.5 py-1.5 rounded-lg" style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}>
+                        Generate with AI
+                      </div>
+                    </div>
                   </div>
-                  <p
-                    className="text-xs font-medium"
-                    style={{ color: "var(--foreground)", opacity: 0.4 }}
-                  >
-                    New deck
-                  </p>
-                </button>
+                </div>
               </div>
             )}
           </>
@@ -862,6 +976,279 @@ export default function FlashcardsPage() {
             featureLabel="Flashcards"
             onClose={() => setPaywallModal(false)}
           />
+        )}
+
+        {/* AI generation modal */}
+        {genStep !== null && (
+          <div
+            className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto"
+            style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+            onClick={() => { if (genStep !== "loading") closeGen(); }}
+          >
+            <div
+              className="w-full max-w-lg rounded-2xl flex flex-col gap-6 p-8 my-auto"
+              style={{ backgroundColor: "var(--surface)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Step: mode */}
+              {genStep === "mode" && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <FontAwesomeIcon icon={faWandMagicSparkles} style={{ width: "1rem", height: "1rem", color: "var(--accent)" }} />
+                    <h2 className="text-lg font-semibold">Generate flashcards</h2>
+                  </div>
+                  <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.55 }}>What do you want to generate?</p>
+                  <div className="flex flex-col gap-3">
+                    {([
+                      { id: "deck" as const, label: "Generate a new deck", desc: "AI creates a full deck of flashcards on your chosen topic" },
+                      { id: "cards" as const, label: "Add cards to an existing deck", desc: "AI generates extra cards and adds them to one of your decks" },
+                    ]).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => { setGenMode(opt.id); setGenStep("topic"); }}
+                        className="rounded-xl border p-4 text-left hover:border-foreground/30 transition-colors cursor-pointer"
+                        style={{ borderColor: "rgba(49,54,40,0.12)" }}
+                      >
+                        <p className="font-medium text-sm">{opt.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground)", opacity: 0.5 }}>{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={closeGen} className="text-sm self-start cursor-pointer hover:opacity-70 transition-opacity" style={{ color: "var(--foreground)", opacity: 0.4 }}>Cancel</button>
+                </>
+              )}
+
+              {/* Step: topic */}
+              {genStep === "topic" && (
+                <>
+                  <h2 className="text-lg font-semibold">What do you want to study?</h2>
+                  <div className="flex flex-col gap-1.5">
+                    <input
+                      autoFocus
+                      value={genTopic}
+                      onChange={(e) => setGenTopic(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && genTopic.trim()) setGenStep("count"); }}
+                      placeholder={`e.g. "Binary search", "React hooks", "SQL joins", "STAR method"`}
+                      className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                      style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                    />
+                  </div>
+                  {patterns.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium" style={{ color: "var(--foreground)", opacity: 0.5 }}>Tag cards with a pattern (optional)</label>
+                      <select
+                        value={genPatternId ?? ""}
+                        onChange={(e) => setGenPatternId(e.target.value ? Number(e.target.value) : null)}
+                        className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                        style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--background)", color: genPatternId ? "var(--foreground)" : "rgba(49,54,40,0.35)" }}
+                      >
+                        <option value="">No pattern tag</option>
+                        {patterns.map((p) => <option key={p.id} value={p.id}>{p.pattern}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <button onClick={() => setGenStep("mode")} className="text-sm cursor-pointer hover:opacity-70 transition-opacity" style={{ color: "var(--foreground)", opacity: 0.4 }}>Back</button>
+                    <button
+                      disabled={!genTopic.trim()}
+                      onClick={() => setGenStep("count")}
+                      className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Step: count */}
+              {genStep === "count" && (
+                <>
+                  <h2 className="text-lg font-semibold">How many cards?</h2>
+                  {genMode === "deck" ? (
+                    <div className="flex gap-3 flex-wrap">
+                      {[5, 10, 15, 20].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setGenCount(n)}
+                          className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer transition-colors"
+                          style={{
+                            borderColor: genCount === n ? "var(--foreground)" : "rgba(49,54,40,0.2)",
+                            backgroundColor: genCount === n ? "var(--foreground)" : "transparent",
+                            color: genCount === n ? "var(--surface)" : "var(--foreground)",
+                          }}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={genCount}
+                        onChange={(e) => setGenCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+                        className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 w-28"
+                        style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                      />
+                      <p className="text-xs" style={{ color: "var(--foreground)", opacity: 0.45 }}>Maximum 20 cards per generation</p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <button onClick={() => setGenStep("topic")} className="text-sm cursor-pointer hover:opacity-70 transition-opacity" style={{ color: "var(--foreground)", opacity: 0.4 }}>Back</button>
+                    <button
+                      onClick={() => { if (genMode === "cards") setGenStep("deck_pick"); else runGenerate(); }}
+                      className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                    >
+                      {genMode === "cards" ? "Next" : "Generate"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Step: deck pick (mode=cards only) */}
+              {genStep === "deck_pick" && (
+                <>
+                  <h2 className="text-lg font-semibold">Which deck?</h2>
+                  {userDecks.length === 0 ? (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.55 }}>You have no existing decks. Switch to creating a new deck instead.</p>
+                      <button onClick={() => { setGenMode("deck"); setGenStep("count"); }} className="text-sm underline cursor-pointer self-start" style={{ color: "var(--accent)" }}>Generate a new deck</button>
+                    </div>
+                  ) : (
+                    <select
+                      value={genDeckId ?? ""}
+                      onChange={async (e) => {
+                        const id = Number(e.target.value);
+                        setGenDeckId(id || null);
+                        setGenExistingFronts([]);
+                        if (id) {
+                          const token = await getToken();
+                          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/flashcards/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                          if (res.ok) {
+                            const cards = await res.json();
+                            setGenExistingFronts(cards.map((c: { front: string }) => c.front));
+                          }
+                        }
+                      }}
+                      className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                      style={{ borderColor: "rgba(49,54,40,0.18)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                    >
+                      <option value="">Select a deck...</option>
+                      {userDecks.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+                    </select>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <button onClick={() => setGenStep("count")} className="text-sm cursor-pointer hover:opacity-70 transition-opacity" style={{ color: "var(--foreground)", opacity: 0.4 }}>Back</button>
+                    <button
+                      disabled={!genDeckId}
+                      onClick={runGenerate}
+                      className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                    >
+                      Generate
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Step: loading */}
+              {genStep === "loading" && (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
+                  <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.55 }}>Generating your flashcards...</p>
+                </div>
+              )}
+
+              {/* Step: preview */}
+              {genStep === "preview" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Preview</h2>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: "rgba(49,54,40,0.08)", color: "var(--foreground)" }}>
+                      {genCards.length} card{genCards.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
+                    {genCards.map((card, i) => (
+                      <div key={i} className="rounded-xl border p-4 flex flex-col gap-3" style={{ borderColor: "rgba(49,54,40,0.12)" }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium tabular-nums" style={{ color: "var(--foreground)", opacity: 0.35 }}>Card {i + 1}</span>
+                          <button
+                            onClick={() => setGenCards((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="cursor-pointer hover:opacity-70 transition-opacity"
+                            style={{ color: "var(--foreground)", opacity: 0.3 }}
+                          >
+                            <FontAwesomeIcon icon={faTrash} style={{ width: "0.75rem", height: "0.75rem" }} />
+                          </button>
+                        </div>
+                        <textarea
+                          value={card.front}
+                          onChange={(e) => setGenCards((prev) => prev.map((c, idx) => idx === i ? { ...c, front: e.target.value } : c))}
+                          placeholder="Front"
+                          rows={2}
+                          className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 resize-none"
+                          style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                        />
+                        <textarea
+                          value={card.back}
+                          onChange={(e) => setGenCards((prev) => prev.map((c, idx) => idx === i ? { ...c, back: e.target.value } : c))}
+                          placeholder="Back"
+                          rows={2}
+                          className="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 resize-none"
+                          style={{ borderColor: "rgba(49,54,40,0.15)", backgroundColor: "var(--background)", color: "var(--foreground)" }}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setGenCards((prev) => [...prev, { front: "", back: "" }])}
+                      className="rounded-xl border border-dashed h-10 flex items-center justify-center gap-2 text-sm cursor-pointer hover:opacity-70 transition-opacity"
+                      style={{ borderColor: "rgba(49,54,40,0.2)", color: "var(--foreground)", opacity: 0.5 }}
+                    >
+                      <FontAwesomeIcon icon={faPlus} style={{ width: "0.7rem", height: "0.7rem" }} />
+                      Add a new card
+                    </button>
+                  </div>
+                  <div className="flex gap-3 justify-end pt-1">
+                    <button
+                      onClick={runGenerate}
+                      disabled={genSaving}
+                      className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity disabled:opacity-40 flex items-center gap-2"
+                      style={{ borderColor: "rgba(49,54,40,0.2)" }}
+                    >
+                      <FontAwesomeIcon icon={faRotate} style={{ width: "0.75rem", height: "0.75rem" }} />
+                      Regenerate
+                    </button>
+                    <button
+                      onClick={saveGenerated}
+                      disabled={genSaving || genCards.length === 0}
+                      className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+                    >
+                      {genSaving ? "Saving..." : genMode === "deck" ? "Save deck" : "Add to deck"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Step: error */}
+              {genStep === "error" && (
+                <>
+                  <h2 className="text-lg font-semibold">Could not generate cards</h2>
+                  <p className="text-sm" style={{ color: "var(--foreground)", opacity: 0.6 }}>{genError}</p>
+                  <div className="flex gap-3">
+                    <button onClick={() => setGenStep("topic")} className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity" style={{ borderColor: "rgba(49,54,40,0.2)" }}>
+                      Try a different topic
+                    </button>
+                    <button onClick={closeGen} className="text-sm cursor-pointer hover:opacity-70 transition-opacity self-center" style={{ color: "var(--foreground)", opacity: 0.4 }}>Cancel</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Create deck modal */}
@@ -1305,26 +1692,28 @@ export default function FlashcardsPage() {
         )}
 
         <div
-          className="flex gap-3 justify-end pt-2 border-t"
+          className="flex flex-col gap-2 pt-2 border-t"
           style={{ borderColor: "rgba(49,54,40,0.1)" }}
         >
-          <button
-            onClick={() => setView("decks")}
-            className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity"
-            style={{ borderColor: "rgba(49,54,40,0.2)" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => setView("decks")}
-            className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
-            style={{
-              backgroundColor: "var(--foreground)",
-              color: "var(--surface)",
-            }}
-          >
-            Save changes
-          </button>
+          {editCardError && (
+            <p className="text-xs text-right" style={{ color: "#c0392b" }}>{editCardError}</p>
+          )}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setEditCardError(""); setView("decks"); }}
+              className="rounded-full border h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-70 transition-opacity"
+              style={{ borderColor: "rgba(49,54,40,0.2)" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveChanges}
+              className="rounded-full h-10 px-5 text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: "var(--foreground)", color: "var(--surface)" }}
+            >
+              Save changes
+            </button>
+          </div>
         </div>
       </div>
     );
