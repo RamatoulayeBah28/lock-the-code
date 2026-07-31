@@ -111,9 +111,5 @@ npm run dev
 - [x] Account deletion webhook (cancels Stripe, cascades DB delete)
 - [x] Contact / feedback form
 - [x] Deploy (Vercel + Railway)
-
-### Todo
-- [ ] Deck color picker
-- [ ] Tooltips throughout the app
-- [ ] Rollback plan for production deploys
-- [ ] Pattern filter on decks page
+- [x] Deck color picker
+- [x] Walkthrough of the app for new users
