@@ -25,5 +25,6 @@ INSERT INTO patterns (pattern) VALUES
     ('Backtracking'),
     ('Hash Set'),
     ('Stack'),
-    ('Queue')
+    ('Queue'),
+    ('Dummy Node')
 ON CONFLICT DO NOTHING;

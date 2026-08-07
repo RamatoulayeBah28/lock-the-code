@@ -44,9 +44,15 @@ def health():
 @app.get("/me")
 def get_me(user=Depends(get_current_user), db=Depends(get_db)):
     cur = db.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT id, is_pro, subscription_status FROM users WHERE id = %s", (user["id"],))
+    cur.execute("SELECT id, is_pro, subscription_status, tour_done FROM users WHERE id = %s", (user["id"],))
     return cur.fetchone()
 
+@app.patch("/me/tour")
+def update_tour(user=Depends(get_current_user), db=Depends(get_db)):
+    cur = db.cursor(cursor_factory=RealDictCursor)
+    cur.execute("UPDATE users SET tour_done = true WHERE id = %s", (user["id"],))
+    db.commit()
+    return {"ok": True}
 
 @app.get("/topics")
 def get_topics(db=Depends(get_db)):

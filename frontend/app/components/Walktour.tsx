@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@clerk/nextjs";
 
 interface TourStep {
   title: string;
@@ -82,19 +83,22 @@ export function useWalktour() {
 export function WalktourProvider({
   children,
   isPro = false,
+  tour_done = true,
 }: {
   children: React.ReactNode;
   isPro?: boolean;
+  tour_done?: boolean;
 }) {
   const [step, setStep] = useState<number>(-1);
+  const { getToken, isSignedIn, isLoaded } = useAuth();
 
   useEffect(() => {
     // Runs only on the client after hydration — avoids SSR mismatch
     const timer = setTimeout(() => {
-      if (!localStorage.getItem("ltc_tour_done")) setStep(0);
+      if (tour_done == false) setStep(0);
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [tour_done]);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const router = useRouter();
 
@@ -108,7 +112,10 @@ export function WalktourProvider({
         return;
       }
       const el = document.querySelector(selector);
-      if (!el) { setTargetRect(null); return; }
+      if (!el) {
+        setTargetRect(null);
+        return;
+      }
       const rect = el.getBoundingClientRect();
       // Element hidden (e.g. sidebar on mobile) — fall back to centered popup
       setTargetRect(rect.width > 0 && rect.height > 0 ? rect : null);
@@ -141,7 +148,17 @@ export function WalktourProvider({
   }
 
   function dismiss() {
-    localStorage.setItem("ltc_tour_done", "1");
+    if (!isLoaded || !isSignedIn) return;
+    async function updateMe() {
+      try {
+        const token = await getToken();
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me/tour`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {}
+    }
+    updateMe();
     setStep(-1);
     setTargetRect(null);
   }

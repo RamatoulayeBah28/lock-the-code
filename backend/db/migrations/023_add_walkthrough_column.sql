@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS tour_done BOOLEAN DEFAULT FALSE;
+UPDATE users SET tour_done = true;
