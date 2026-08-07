@@ -1,7 +1,32 @@
+# Secrets — never bake these into an image layer.
+# docker-compose injects the real values at runtime via `env_file`.
 .env
+.env.*
+
+# Host virtualenv. This is ~139MB of the build context and the image
+# installs its own deps from requirements.txt, so shipping it is pure waste.
+.venv/
+venv/
+
+# Python build artifacts
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-tests/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+
+# Docs and infra files the running app never reads
+*.md
+Dockerfile*
+.dockerignore
+railway.toml
+
+# One-off scripts
 send_test_email.py
+
+# NOTE: tests/ is intentionally NOT ignored. This is a local dev image and
+# you want `docker compose exec backend pytest` to work. If you later add a
+# production Dockerfile, give it its own .dockerignore that excludes tests.

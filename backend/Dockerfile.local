@@ -1,8 +1,34 @@
+# Local development image. Production on Railway uses the railpack builder
+# (see railway.toml), not this file.
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
+# Don't buffer stdout — otherwise print() and uvicorn logs sit in a buffer and
+# `docker compose logs` looks frozen. Don't write .pyc either: /app is a bind
+# mount in compose, so __pycache__ would land in your working tree.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# psql, for `docker compose exec backend psql $DATABASE_URL`
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
+# requirements.txt is copied and installed before the source is copied, so
+# editing a .py file doesn't invalidate the (slow) pip install layer.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Dev-only extras, deliberately not in requirements.txt (which is what prod
+# installs). watchfiles gives uvicorn --reload real filesystem events instead
+# of falling back to stat-polling every file on a timer.
+RUN pip install --no-cache-dir watchfiles pytest
+
 COPY . .
+
 EXPOSE 8000
+
+# compose overrides this with a --reload variant; this default is what you get
+# from a bare `docker run`.
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

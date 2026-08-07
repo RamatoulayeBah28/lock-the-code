@@ -32,35 +32,73 @@ The only free technical interview study plan you need. Lock The Code uses SM-2 s
 
 ## Local development
 
-### Prerequisites
+### Backend with Docker (recommended)
 
-- Python 3.12+
-- Node.js 20+
-- PostgreSQL
+Brings up Postgres, applies every migration, seeds reference data, and starts
+the API with hot reload — one command.
 
-### Backend
+```bash
+cp backend/.env.example backend/.env   # fill in keys (see Environment Variables below)
+docker compose up --build              # → http://localhost:8000/docs
+```
+
+`DATABASE_URL` from `backend/.env` is deliberately overridden in
+`docker-compose.yml`, so the local stack can never reach the production
+database — it always talks to the `db` container.
+
+| Command | What it does |
+|---|---|
+| `docker compose up --build` | Start everything. Applies any new migrations first |
+| `docker compose down` | Stop, **keep** the database |
+| `docker compose down -v` | Stop and **wipe** the database volume |
+| `docker compose logs -f backend` | Tail API logs |
+| `docker compose exec backend psql $DATABASE_URL` | psql shell into the dev DB |
+| `psql postgresql://postgres:postgres@localhost:5433/leetcode_review` | Same, from the host (port 5433 avoids clashing with a local Postgres) |
+
+Source is bind-mounted, so editing a `.py` file reloads the server — no rebuild.
+Rebuild only when `requirements.txt` changes.
+
+#### How migrations are applied
+
+`backend/db/migrate.sh` runs as a one-shot `migrate` service before the backend
+starts, and records each applied file in a `schema_migrations` table. This
+matters because most migrations here use bare `CREATE TABLE` / `ADD COLUMN`
+without `IF NOT EXISTS`, so they cannot safely re-run — the ledger is what makes
+`docker compose up` repeatable.
+
+Re-run rules differ per file:
+
+| File | Behavior |
+|---|---|
+| `db/migrations/*.sql` | Applied once each, tracked in the ledger |
+| `db/seed.sql` | Re-run every time — it's `ON CONFLICT DO NOTHING`, so new topics/patterns land automatically |
+| `db/seed_flashcards.sql` | Applied once — it has no `ON CONFLICT` and `flashcards` has no unique key, so re-running would duplicate every system card |
+
+**To add a migration:** create `db/migrations/0NN_description.sql` (next number —
+check `ls db/migrations | tail -1`; one number per migration, no duplicates),
+then `docker compose up -d`. It applies on the next boot; no volume wipe needed.
+
+**Production is separate.** Railway builds with `railpack` (see
+`backend/railway.toml`), not this Dockerfile, and migrations there are applied by
+hand in the Railway Query tab. Always run the migration on Railway **before**
+deploying code that depends on the new column.
+
+### Backend without Docker
 
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env  # fill in keys (see Environment Variables below)
+cp .env.example .env
+DB_DIR=db PGHOST=localhost PGDATABASE=leetcode_review bash db/migrate.sh
 uvicorn main:app --reload --port 8000
 ```
 
-Run migrations in order:
-
-```bash
-for f in db/migrations/*.sql; do psql $DATABASE_URL < "$f"; done
-```
-
-Then seed reference data:
-
-```bash
-psql $DATABASE_URL < db/seed.sql
-```
+Prerequisites: Python 3.12+, PostgreSQL.
 
 ### Frontend
+
+Prerequisites: Node.js 20+.
 
 ```bash
 cd frontend
