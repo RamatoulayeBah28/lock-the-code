@@ -151,3 +151,23 @@ npm run dev
 - [x] Deploy (Vercel + Railway)
 - [x] Deck color picker
 - [x] Walkthrough of the app for new users
+- [x] One-command local dev stack (Docker Compose, auto-migrations, hot reload)
+
+### Next up
+
+- [ ] **`BackgroundTasks` for the welcome email** — emails currently send synchronously inside
+      `get_current_user` and the Stripe webhook, blocking a new user's first request and risking
+      webhook retries _(one afternoon, zero infra)_
+- [ ] **Redis cache for the problem list** — Railway Redis add-on + `redis-py`, cache-aside on
+      `GET /problems` with invalidation on all four write paths _(one day)_
+- [ ] **Integration tests for critical paths** — SM-2 scheduling and the Stripe webhook, the two
+      places a silent break costs the most _(highest value on this list)_
+- [ ] **Sentry for 5xx alerts** — nothing currently notifies on a production 500 _(one hour)_
+
+### Backlog
+
+- [ ] Rate limiting on AI endpoints (unbounded per-user spend today)
+- [ ] Input length limits on request schemas
+- [ ] Rollback handling in the DB connection pool
+- [ ] `require_pro` dependency to replace four copies of the same gate
+- [ ] Health check that actually queries the database
