@@ -6,3 +6,6 @@ frontend/.next/
 frontend/.env.local
 .DS_Store
 
+# Personal planning notes — kept locally, not part of the repo
+HANDOFF.md
+ROADMAP.md
