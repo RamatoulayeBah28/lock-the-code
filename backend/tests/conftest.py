@@ -31,7 +31,13 @@ FAKE_USER_B = {
 @pytest.fixture
 def db():
     conn = psycopg2.connect(TEST_DB_URL)
-    yield conn
+    try:
+        yield conn
+    finally:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     cur = conn.cursor()
     cur.execute(
         "TRUNCATE TABLE reviews, problem_topics, problem_patterns, problems, users CASCADE"
