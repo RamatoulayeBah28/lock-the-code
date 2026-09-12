@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Dev-only extras, deliberately not in requirements.txt (which is what prod
 # installs). watchfiles gives uvicorn --reload real filesystem events instead
 # of falling back to stat-polling every file on a timer.
-RUN pip install --no-cache-dir watchfiles pytest
+RUN pip install --no-cache-dir watchfiles pytest pytest-cov
 
 COPY . .
 

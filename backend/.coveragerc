@@ -1,0 +1,9 @@
+[run]
+omit =
+    */tests/*
+    */.venv/*
+    */site-packages/*
+
+[report]
+exclude_lines =
+    pragma: no cover
